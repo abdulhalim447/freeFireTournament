@@ -11,18 +11,18 @@ import 'dart:async';
 import 'package:tournament_app/services/user_preference.dart';
 import 'package:tournament_app/screens/matches/match_related/tournament_details_screen.dart';
 
-class BRMatchScreen extends StatefulWidget {
+class LoneWolfScreen extends StatefulWidget {
   final String matchType;
   final String image;
 
-  const BRMatchScreen({Key? key, required this.matchType, required this.image})
+  const LoneWolfScreen({Key? key, required this.matchType, required this.image})
     : super(key: key);
 
   @override
-  State<BRMatchScreen> createState() => _BRMatchScreenState();
+  State<LoneWolfScreen> createState() => _LoneWolfScreenState();
 }
 
-class _BRMatchScreenState extends State<BRMatchScreen> {
+class _LoneWolfScreenState extends State<LoneWolfScreen> {
   bool _isLoading = true;
   String? currentUserId;
 
@@ -48,7 +48,7 @@ class _BRMatchScreenState extends State<BRMatchScreen> {
       errorMessage = null;
     });
 
-    final response = await NetworkCaller.getRequest(URLs.BRMatchUrl);
+    final response = await NetworkCaller.getRequest(URLs.LoneWolfUrl);
 
     if (response.isSuccess) {
       final matchesData = GetAllMatches.fromJson(response.responsData);

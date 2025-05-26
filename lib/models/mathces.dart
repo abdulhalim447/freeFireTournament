@@ -15,6 +15,8 @@ class Matches {
   String? createdDate;
   String? map;
   int? joined;
+  int? joinedCount;
+  List<dynamic>? joinedUserIds;
   String? roomDetails;
   String? totalPrizeDetails;
 
@@ -35,6 +37,8 @@ class Matches {
     this.createdDate,
     this.map,
     this.joined,
+    this.joinedCount,
+    this.joinedUserIds,
     this.roomDetails,
     this.totalPrizeDetails,
   });
@@ -56,6 +60,10 @@ class Matches {
     createdDate = json['created_date'];
     map = json['map'];
     joined = json['joined'];
+    joinedCount = json['joined_count'];
+    if (json['joined_user_ids'] != null) {
+      joinedUserIds = json['joined_user_ids'];
+    }
     roomDetails = json['room_details'];
     totalPrizeDetails = json['total_prize_details'];
   }
@@ -78,6 +86,8 @@ class Matches {
     data['created_date'] = createdDate;
     data['map'] = map;
     data['joined'] = joined;
+    data['joined_count'] = joinedCount;
+    data['joined_user_ids'] = joinedUserIds;
     data['room_details'] = roomDetails;
     data['total_prize_details'] = totalPrizeDetails;
     return data;

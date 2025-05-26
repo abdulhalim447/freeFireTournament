@@ -5,6 +5,7 @@ import 'package:tournament_app/network/network_caller.dart';
 import 'package:tournament_app/services/user_preference.dart';
 import 'package:tournament_app/utils/urls.dart';
 import 'package:tournament_app/widgets/show_snackbar.dart';
+import 'package:tournament_app/screens/matches/match_related/greeting_screen.dart';
 
 class ConfirmJoinScreen extends StatefulWidget {
   final Matches match;
@@ -26,7 +27,7 @@ class ConfirmJoinScreen extends StatefulWidget {
 
 class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
   double? userBalance;
-  bool isLoading = true;
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -175,7 +176,18 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
                   Icon(Icons.account_balance_wallet, color: Colors.purple),
                   SizedBox(width: 8),
                   Text(
-                    'Balance Details',
+                    'Balance: ',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple,
+                    ),
+                  ),
+                  Spacer(),
+                  Text(
+                    isLoading
+                        ? 'Loading...'
+                        : '${userBalance?.toStringAsFixed(2) ?? '0.00'} TK',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -184,28 +196,6 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
                   ),
                 ],
               ),
-              Divider(color: Colors.purple.withOpacity(0.3)),
-              _buildDetailRow(
-                'Current Balance',
-                isLoading
-                    ? 'Loading...'
-                    : '${userBalance?.toStringAsFixed(2) ?? '0.00'} TK',
-                Icons.money,
-              ),
-              _buildDetailRow(
-                'Entry Fee',
-                '${widget.match.entryFee ?? 0} TK',
-                Icons.payment,
-              ),
-              if (!isLoading) ...[
-                Divider(color: Colors.purple.withOpacity(0.3)),
-                _buildDetailRow(
-                  'Remaining Balance',
-                  '${((userBalance ?? 0) - (widget.match.entryFee ?? 0)).toStringAsFixed(2)} TK',
-                  Icons.calculate,
-                  valueColor: _hasEnoughBalance ? Colors.green : Colors.red,
-                ),
-              ],
             ],
           ),
         ),
@@ -372,8 +362,11 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () => _handleConfirmJoin(context),
-                icon: Icon(Icons.check_circle),
-                label: Text('Confirm Join'),
+                icon:
+                    isLoading
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Icon(Icons.check_circle),
+                label: isLoading ? Text('Loading...') : Text('Confirm Join'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
@@ -390,73 +383,129 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
     );
   }
 
-  void _handleConfirmJoin(BuildContext context) async {
+  Future<void> _handleConfirmJoin(BuildContext context) async {
+    isLoading = true;
+    if (mounted) {
+      setState(() {});
+    }
+
     if (!_hasEnoughBalance) {
       showSnackBarMessage(
         context,
-        'Insufficient balance to join the match',
+        'Insufficient balance to join the match. Required: ${widget.match.entryFee} TK, Your Balance: ${userBalance?.toStringAsFixed(2)} TK',
         type: SnackBarType.error,
       );
       return;
     }
 
     try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(child: CircularProgressIndicator()),
-      );
+      // Show loading indica
+      // Get user ID
+      final userId = await UserPreference.getUserId();
+      if (userId == null) {
+        // Close loading indicator
+      
+        showSnackBarMessage(
+          context,
+          'User not found. Please login again.',
+          type: SnackBarType.error,
+        );
+        return;
+      }
 
       // Prepare the data for API call
       final joinData = {
         'match_id': widget.match.id,
+        'user_id': userId,
+        'match_title': widget.match.matchTitle,
         'player1_id': widget.player1Id,
-        'player2_id': widget.player2Id,
-        'entry_type': widget.entryType,
+        if (widget.player2Id != null) 'player2_id': widget.player2Id,
+        'entry_fee': widget.match.entryFee?.toString(),
+        'entry_type': widget.entryType.toLowerCase(),
+        'categories': widget.match.categories,
+        'match_start_time': widget.match.matchStartTime,
+        'match_start_date': widget.match.matchStartDate,
       };
 
-      // TODO: Implement your API call here
-      await Future.delayed(Duration(seconds: 2)); // Simulate API call
-      print('Confirming join with data: $joinData');
-
-      // Close loading indicator
-      Navigator.pop(context);
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Successfully joined the match!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
+      // Make API call to join match
+      final response = await NetworkCaller.postRequest(
+        URLs.joinedMatchUrl,
+        body: joinData,
       );
+      isLoading = false;
+      if (mounted) {
+        setState(() {});
+      }
 
-      // Navigate back to the matches screen
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } catch (e) {
-      // Close loading indicator
-      Navigator.pop(context);
+      if (!mounted) return;
 
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Failed to join match: ${e.toString()}'),
-            ],
+      
+
+      if (response.isSuccess) {
+        // Decrease user balance
+        final decreaseBalanceResponse = await NetworkCaller.postRequest(
+          URLs.decrementBalanceUrl,
+          body: {"user_id": userId, "amount": widget.match.entryFee},
+        );
+
+        if (!decreaseBalanceResponse.isSuccess) {
+          showSnackBarMessage(
+            context,
+            'Failed to update balance: ${decreaseBalanceResponse.errorMessage}',
+            type: SnackBarType.error,
+          );
+          return;
+        }
+
+        showSnackBarMessage(
+          context,
+          'Successfully joined the match!',
+          type: SnackBarType.success,
+        );
+
+        // Navigate to the reservation screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => ReservationScreen(
+                  match: widget.match,
+                  player1Id: widget.player1Id,
+                  player2Id: widget.player2Id,
+                ),
           ),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
+        );
+      } else {
+        isLoading = false;
+        if (mounted) {
+          setState(() {});
+        }
+
+        // Enhanced error message handling
+        String errorMsg = response.errorMessage ?? 'Failed to join match';
+        if (response.responsData != null &&
+            response.responsData['message'] != null) {
+          errorMsg = response.responsData['message'].toString();
+        }
+
+        showSnackBarMessage(context, errorMsg, type: SnackBarType.error);
+      }
+    } catch (e) {
+      isLoading = false;
+      if (mounted) {
+        setState(() {});
+      }
+      if (!mounted) return;
+
+      // Ensure loading indicator is closed in case of error
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      showSnackBarMessage(
+        context,
+        'Error: ${e.toString()}',
+        type: SnackBarType.error,
       );
     }
   }

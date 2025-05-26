@@ -6,29 +6,30 @@ class WalletScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Responsive sizing
+    final colorScheme = Theme.of(context).colorScheme;
     final Size screenSize = MediaQuery.of(context).size;
     final bool isSmallScreen = screenSize.width < 360;
-    final double horizontalPadding = 0;
-    final double verticalPadding = 0;
 
     return Scaffold(
-      backgroundColor: Color(0xFFF6F6F6),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
         elevation: 0,
+        scrolledUnderElevation: 1,
         title: Text(
           'Wallet',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
@@ -38,146 +39,169 @@ class WalletScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildBalanceCard(context, isSmallScreen),
-            SizedBox(height: 16),
+            _buildBalanceCard(context),
+            const SizedBox(height: 24),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: _buildHelpSection(context, isSmallScreen),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Help Center',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
             ),
-            SizedBox(height: 60), // For bottom navigation bar space
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildHelpSection(context),
+            ),
+            const SizedBox(height: 60),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBalanceCard(BuildContext context, bool isSmallScreen) {
+  Widget _buildBalanceCard(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF8B5CF6), // Violet-500
+            Color(0xFF7C3AED), // Violet-600
+          ],
+        ),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: Offset(0, 2),
+            color: Color(0xFF8B5CF6).withOpacity(0.3),
+            blurRadius: 20,
+            offset: Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          // Top Balance Section
+          Container(
+            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'TOTAL CASH BALANCE',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Text(
-                      'BDT 0',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        // Navigate to transaction history
-                      },
-                      child: Row(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: const [
-                              Text(
-                                'View Transaction',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              Text(
-                                'History',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total Balance',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withOpacity(0.9),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.grey,
-                            size: 14,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'BDT ',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              '0.00',
+                              style: TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                height: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.history, color: Colors.white, size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            'History',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const Divider(height: 24),
-                _buildWalletBalance(
+              ],
+            ),
+          ),
+
+          // Balance Items
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            margin: const EdgeInsets.all(3),
+            child: Column(
+              children: [
+                _buildWalletItem(
+                  context,
                   icon: Icons.emoji_events,
-                  iconColor: Colors.amber,
-                  title: 'WINNING CASH BALANCE',
+                  title: 'Winning Balance',
                   amount: 'BDT 0',
-                  infoAction: () {},
-                  actionButton: _buildActionButton(
-                    context,
-                    'WITHDRAW',
-                    Icons.monetization_on_outlined,
-                    Colors.green,
-                    () {},
-                  ),
-                  isSmallScreen: isSmallScreen,
+                  actionLabel: 'Withdraw',
+                  actionIcon: Icons.monetization_on_outlined,
+                  showDivider: true,
                 ),
-                const SizedBox(height: 20),
-                _buildWalletBalance(
-                  icon: FontAwesomeIcons.landmark,
-                  iconColor: Colors.green.shade700,
-                  title: 'DEPOSIT CASH',
+                _buildWalletItem(
+                  context,
+                  icon: Icons.account_balance_wallet,
+                  title: 'Deposit Balance',
                   amount: 'BDT 0',
-                  infoAction: () {},
-                  actionButton: _buildActionButton(
-                    context,
-                    'ADD MORE',
-                    Icons.add,
-                    Colors.blue,
-                    () {},
-                  ),
-                  isSmallScreen: isSmallScreen,
+                  actionLabel: 'Add Money',
+                  actionIcon: Icons.add,
+                  showDivider: true,
                 ),
-                const SizedBox(height: 20),
-                _buildWalletBalance(
+                _buildWalletItem(
+                  context,
                   icon: Icons.card_giftcard,
-                  iconColor: Colors.purple,
-                  title: 'REFER AND EARN',
+                  title: 'Referral Balance',
                   amount: 'BDT 0',
-                  infoAction: () {},
-                  actionButton: _buildActionButton(
-                    context,
-                    'REFER & EARN',
-                    Icons.share,
-                    Colors.purple,
-                    () {},
-                  ),
-                  isSmallScreen: isSmallScreen,
+                  actionLabel: 'Share',
+                  actionIcon: Icons.share,
+                  showDivider: false,
                 ),
-                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -186,109 +210,119 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWalletBalance({
+  Widget _buildWalletItem(
+    BuildContext context, {
     required IconData icon,
-    required Color iconColor,
     required String title,
     required String amount,
-    required VoidCallback infoAction,
-    required Widget actionButton,
-    required bool isSmallScreen,
+    required String actionLabel,
+    required IconData actionIcon,
+    required bool showDivider,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
       children: [
-        Icon(icon, color: iconColor, size: 22),
-        const SizedBox(width: 10),
-        Expanded(
+        Padding(
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    amount,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFF8B5CF6).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: Color(0xFF8B5CF6), size: 24),
               ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: infoAction,
-                child: Icon(
-                  Icons.info_outline,
-                  color: Colors.grey.shade400,
-                  size: 16,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      amount,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF8B5CF6).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(actionIcon, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      actionLabel,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        actionButton,
+        if (showDivider)
+          Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.1)),
       ],
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context,
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        minimumSize: Size(40, 36),
-      ),
-      icon: Icon(icon, size: 16),
-      label: Text(
-        label,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-      ),
-    );
-  }
-
-  Widget _buildHelpSection(BuildContext context, bool isSmallScreen) {
+  Widget _buildHelpSection(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHelpItem(
           context: context,
+          icon: Icons.add_circle_outline,
           englishTitle: 'HOW TO ADD MONEY?',
           bengaliTitle: 'কিভাবে টাকা অ্যাড করবেন',
-          isSmallScreen: isSmallScreen,
         ),
         const SizedBox(height: 16),
         _buildHelpItem(
           context: context,
+          icon: Icons.meeting_room_outlined,
           englishTitle: 'HOW TO COLLECT ROOM ID?',
           bengaliTitle: 'কিভাবে রুম আইডি পাবেন',
-          isSmallScreen: isSmallScreen,
         ),
         const SizedBox(height: 16),
         _buildHelpItem(
           context: context,
+          icon: Icons.sports_esports_outlined,
           englishTitle: 'HOW TO JOIN IN A MATCH?',
           bengaliTitle: 'কিভাবে ম্যাচে জয়েন করবেন',
-          isSmallScreen: isSmallScreen,
         ),
       ],
     );
@@ -296,29 +330,36 @@ class WalletScreen extends StatelessWidget {
 
   Widget _buildHelpItem({
     required BuildContext context,
+    required IconData icon,
     required String englishTitle,
     required String bengaliTitle,
-    required bool isSmallScreen,
   }) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 0,
+      color: colorScheme.secondaryContainer.withOpacity(0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () {},
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colorScheme.secondaryContainer,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red, width: 1.5),
                 ),
-                child: const Center(
-                  child: Icon(Icons.play_arrow, color: Colors.red, size: 20),
+                child: Icon(
+                  icon,
+                  color: colorScheme.onSecondaryContainer,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,48 +367,31 @@ class WalletScreen extends StatelessWidget {
                     Text(
                       englishTitle,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                     Text(
                       bengaliTitle,
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ],
                 ),
               ),
+              Icon(
+                Icons.play_circle_fill_rounded,
+                color: colorScheme.secondary,
+                size: 32,
+              ),
             ],
           ),
         ),
-        Expanded(
-          flex: 1,
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.play_arrow, color: Colors.red, size: 16),
-                const SizedBox(width: 2),
-                Text(
-                  'ভিডিওটি\nদেখুন',
-                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

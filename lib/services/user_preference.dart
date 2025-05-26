@@ -20,6 +20,11 @@ class UserPreference {
     return null;
   }
 
+  static Future<String?> getUserId() async {
+    final user = await getUser();
+    return user?.id?.toString();
+  }
+
   static Future<bool> setLoggedIn(bool value) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return await prefs.setBool(_keyIsLoggedIn, value);

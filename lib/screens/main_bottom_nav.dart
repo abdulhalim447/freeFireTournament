@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:tournament_app/screens/home_screen.dart';
 import 'package:tournament_app/screens/my_matches.dart';
@@ -23,25 +23,25 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   List<PersistentBottomNavBarItem> _navBarsItems() {
     return [
       PersistentBottomNavBarItem(
-        icon: Icon(FontAwesomeIcons.gamepad),
+        icon: Image.asset("assets/icons/game.png"),
         title: (" Play"),
         activeColorPrimary: Colors.indigo,
         inactiveColorPrimary: Colors.grey,
       ),
       PersistentBottomNavBarItem(
-        icon: Icon(FontAwesomeIcons.medal),
+        icon: Image.asset("assets/icons/matches.png"),
         title: ("My Matches"),
         activeColorPrimary: Colors.indigo,
         inactiveColorPrimary: Colors.grey,
       ),
       PersistentBottomNavBarItem(
-        icon: Icon(FontAwesomeIcons.trophy),
+        icon: Image.asset("assets/icons/results.png"),
         title: ("Results"),
         activeColorPrimary: Colors.indigo,
         inactiveColorPrimary: Colors.grey,
       ),
       PersistentBottomNavBarItem(
-        icon: Icon(FontAwesomeIcons.user),
+        icon: Image.asset("assets/icons/profile.png"),
         title: ("Profile"),
         activeColorPrimary: Colors.indigo,
         inactiveColorPrimary: Colors.grey,
@@ -68,7 +68,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
       ),
       //popAllScreensOnTapOfSelectedTab: true,
       //popActionScreens: PopActionScreensType.all,
-      navBarStyle: NavBarStyle.style1, // Customize this to your design
+      navBarStyle: NavBarStyle.style3, // Customize this to your design
     );
   }
 }

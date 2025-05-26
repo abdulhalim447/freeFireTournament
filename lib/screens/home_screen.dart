@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:marquee/marquee.dart';
-import 'package:tournament_app/screens/match_details.dart';
+
 import 'package:tournament_app/screens/matches/br_match.dart';
-import 'package:tournament_app/screens/my_matches.dart';
-import 'package:tournament_app/screens/tournament_details_screen.dart';
+import 'package:tournament_app/screens/matches/clash_squads.dart';
+import 'package:tournament_app/screens/matches/cs2vs2.dart';
+import 'package:tournament_app/screens/matches/free_match.dart';
+import 'package:tournament_app/screens/matches/lone_wolf.dart';
+import 'package:tournament_app/screens/matches/ludo_screen.dart';
+
+import 'package:tournament_app/network/network_caller.dart';
+import 'package:tournament_app/models/get_all_match_model.dart';
+import 'package:tournament_app/utils/urls.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -15,34 +22,240 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentSlideIndex = 0;
+  bool _isLoading = true;
+  Map<String, int> matchCounts = {};
+  final ScrollController _scrollController = ScrollController();
 
   // Slider images would come from API later
-  final List<String> _sliderImages = ['assets/images/freefire.png'];
+  final List<String> _sliderImages = [
+    'assets/images/freefire.png',
+    'assets/images/clash_squad.png',
+    'assets/images/lone_wolf.png',
+    'assets/images/cs2vs2.png',
+    'assets/images/ludo.png',
+    'assets/images/free_match.png',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMatchCounts();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchMatchCounts() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final categories = {
+      'BR MATCH': URLs.BRMatchUrl,
+      'CLASH SQUAD': URLs.ClashSquadUrl,
+      'LONE WOLF': URLs.LoneWolfUrl,
+      'CS 2 VS 2': URLs.CS2vs2Url,
+      'LUDO': URLs.LudoUrl,
+      'FREE MATCH': URLs.FreeMatchUrl,
+    };
+
+    for (var entry in categories.entries) {
+      final response = await NetworkCaller.getRequest(entry.value);
+      if (response.isSuccess) {
+        final matchesData = GetAllMatches.fromJson(response.responsData);
+        matchCounts[entry.key] = matchesData.matches?.length ?? 0;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
+  
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Slider/Carousel
-              _buildImageSlider(),
+        child: RefreshIndicator(
+          onRefresh: _fetchMatchCounts,
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              // App Bar
+              SliverAppBar(
+                expandedHeight: 200.0,
+                floating: true,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: _buildImageSlider(),
+                ),
+              ),
 
-              // Marquee text
-              _buildMarqueeText(),
+              // Marquee Text
+              SliverToBoxAdapter(child: _buildMarqueeText()),
 
-              // Free Fire section
-              _buildSectionTitle('FREE FIRE'),
-              _buildGameTournaments(),
+              // Section Title - FREE FIRE
+              SliverToBoxAdapter(child: _buildSectionTitle('FREE FIRE', theme)),
 
-              // Ludo and Free Match section
-              _buildSectionTitle('LUDO AND FREE MATCH'),
-              _buildLudoAndFreeMatchSection(),
+              // Game Tournaments Grid
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                sliver:
+                    _isLoading
+                        ? SliverToBoxAdapter(
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        )
+                        : SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: size.width > 600 ? 3 : 2,
+                                childAspectRatio: 0.85,
+                                mainAxisSpacing: 16.0,
+                                crossAxisSpacing: 16.0,
+                              ),
+                          delegate: SliverChildListDelegate([
+                            _buildTournamentCard(
+                              context,
+                              'BR MATCH',
+                              matchCounts['BR MATCH'] ?? 0,
+                              'assets/images/freefire.png',
+                              onTap:
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => BRMatchScreen(
+                                            matchType: 'BR MATCH',
+                                            image: 'assets/images/freefire.png',
+                                          ),
+                                    ),
+                                  ),
+                            ),
+                            _buildTournamentCard(
+                              context,
+                              'Clash Squad',
+                              matchCounts['CLASH SQUAD'] ?? 0,
+                              'assets/images/clash_squad.png',
+                              onTap:
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => ClashSquadsScreen(
+                                            matchType: 'Clash Squad',
+                                            image:
+                                                'assets/images/clash_squad.png',
+                                          ),
+                                    ),
+                                  ),
+                            ),
+                            _buildTournamentCard(
+                              context,
+                              'LONE WOLF',
+                              matchCounts['LONE WOLF'] ?? 0,
+                              'assets/images/lone_wolf.png',
+                              onTap:
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => LoneWolfScreen(
+                                            matchType: 'LONE WOLF',
+                                            image:
+                                                'assets/images/lone_wolf.png',
+                                          ),
+                                    ),
+                                  ),
+                            ),
+                            _buildTournamentCard(
+                              context,
+                              'CS 2 VS 2',
+                              matchCounts['CS 2 VS 2'] ?? 0,
+                              'assets/images/cs2vs2.png',
+                              onTap:
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => CS2vs2Screen(
+                                            matchType: 'CS 2 VS 2',
+                                            image: 'assets/images/cs2vs2.png',
+                                          ),
+                                    ),
+                                  ),
+                            ),
+                          ]),
+                        ),
+              ),
 
-              const SizedBox(height: 20),
+              // Section Title - LUDO AND FREE MATCH
+              SliverToBoxAdapter(
+                child: _buildSectionTitle('LUDO AND FREE MATCH', theme),
+              ),
+
+              // Ludo and Free Match Grid
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: size.width > 600 ? 3 : 2,
+                    childAspectRatio: 0.85,
+                    mainAxisSpacing: 16.0,
+                    crossAxisSpacing: 16.0,
+                  ),
+                  delegate: SliverChildListDelegate([
+                    _buildTournamentCard(
+                      context,
+                      'Ludo',
+                      matchCounts['LUDO'] ?? 0,
+                      'assets/images/ludo.png',
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => LudoScreen(
+                                    matchType: 'Ludo',
+                                    image: 'assets/images/ludo.png',
+                                  ),
+                            ),
+                          ),
+                    ),
+                    _buildTournamentCard(
+                      context,
+                      'Free Match',
+                      matchCounts['FREE MATCH'] ?? 0,
+                      'assets/images/free_match.png',
+                      onTap:
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => FreeMatchScreen(
+                                    matchType: 'Free Match',
+                                    image: 'assets/images/free_match.png',
+                                  ),
+                            ),
+                          ),
+                    ),
+                  ]),
+                ),
+              ),
             ],
           ),
         ),
@@ -51,14 +264,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildImageSlider() {
-    return Column(
+    return Stack(
       children: [
         CarouselSlider(
           items:
               _sliderImages.map((imagePath) {
                 return Container(
                   width: MediaQuery.of(context).size.width,
-                  margin: const EdgeInsets.symmetric(horizontal: 5.0),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
@@ -84,25 +296,30 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children:
-              _sliderImages.asMap().entries.map((entry) {
-                return Container(
-                  width: 8.0,
-                  height: 8.0,
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 8.0,
-                    horizontal: 4.0,
-                  ),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.orange.withOpacity(
-                      _currentSlideIndex == entry.key ? 0.9 : 0.4,
+        Positioned(
+          bottom: 10,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children:
+                _sliderImages.asMap().entries.map((entry) {
+                  return Container(
+                    width: 8.0,
+                    height: 8.0,
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 8.0,
+                      horizontal: 4.0,
                     ),
-                  ),
-                );
-              }).toList(),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).colorScheme.primary.withOpacity(
+                        _currentSlideIndex == entry.key ? 0.9 : 0.4,
+                      ),
+                    ),
+                  );
+                }).toList(),
+          ),
         ),
       ],
     );
@@ -110,239 +327,134 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMarqueeText() {
     return Container(
-      height: 50.0,
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
-      margin: const EdgeInsets.symmetric(vertical: 5.0),
-      color: Colors.white,
-      child: Marquee(
-        text: 'না প্রয়োজনে টেলিগ্রাম জয়েন করুন এবং এভাডিন',
-        style: const TextStyle(
-          fontSize: 18.0,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
+      height: 40.0,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Card(
+        elevation: 0,
+        color: Theme.of(context).colorScheme.surfaceVariant,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
+          child: Marquee(
+            text: 'যে কোনো প্রয়োজনে টেলিগ্রাম  গ্রুপে যোগাযোগ করুন। ধন্যবাদ',
+            style: TextStyle(
+              fontSize: 16.0,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            scrollAxis: Axis.horizontal,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            blankSpace: 50.0,
+            velocity: 50.0,
+            pauseAfterRound: const Duration(seconds: 1),
+            startPadding: 10.0,
+            accelerationDuration: const Duration(seconds: 1),
+            accelerationCurve: Curves.linear,
+            decelerationDuration: const Duration(milliseconds: 500),
+            decelerationCurve: Curves.easeOut,
+          ),
         ),
-        scrollAxis: Axis.horizontal,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        blankSpace: 50.0,
-        velocity: 50.0,
-        pauseAfterRound: const Duration(seconds: 1),
-        startPadding: 10.0,
-        accelerationDuration: const Duration(seconds: 1),
-        accelerationCurve: Curves.linear,
-        decelerationDuration: const Duration(milliseconds: 500),
-        decelerationCurve: Curves.easeOut,
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
-      margin: const EdgeInsets.only(top: 2.0, bottom: 10.0),
-      color: Colors.white,
-      alignment: Alignment.center,
+  Widget _buildSectionTitle(String title, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 22.0,
+        style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: theme.colorScheme.onBackground,
         ),
-      ),
-    );
-  }
-
-  Widget _buildGameTournaments() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 16.0,
-        crossAxisSpacing: 16.0,
-        childAspectRatio: 0.85,
-        children: [
-          _buildTournamentCard(
-            'BR MATCH',
-            '4 matches found',
-            'assets/images/freefire.png',
-            onTap: () {
-              // Navigate to TournamentDetailsScreen for BR MATCH
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => BRMatchScreen(
-                        matchType: 'BR MATCH',
-                        image: 'assets/images/freefire.png',
-                      ),
-                ),
-              );
-            },
-          ),
-          _buildTournamentCard(
-            'Clash Squad',
-            '8 matches found',
-            'assets/images/clash_squad.png',
-            onTap: () {
-              // Navigate to TournamentDetailsScreen for Clash Squad
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => TournamentDetailsScreen(
-                        tournament: {
-                          'title': 'Clash Squad',
-                          'prizePool': '1500',
-                          'entryFee': '75',
-                          'firstPrize': '750',
-                          'dateTime': DateTime.now().add(Duration(days: 1)),
-                          'map': 'Bermuda',
-                          'mode': 'CS 4v4',
-                          'image': 'assets/images/clash_squad.png',
-                        },
-                      ),
-                ),
-              );
-            },
-          ),
-          _buildTournamentCard(
-            'LONE WOLF',
-            '9 matches found',
-            'assets/images/lone_wolf.png',
-            onTap: () {
-              // Navigate to MatchDetailsScreen for LONE WOLF
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => MatchDetailsScreen(
-                        matchId: 'LW001',
-                        matchType: 'LONE WOLF',
-                        image: 'assets/images/lone_wolf.png',
-                      ),
-                ),
-              );
-            },
-          ),
-          _buildTournamentCard(
-            'CS 2 VS 2',
-            '7 matches found',
-            'assets/images/cs2vs2.png',
-            onTap: () {
-              // Navigate to MatchDetailsScreen for CS 2 VS 2
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => MatchDetailsScreen(
-                        matchId: 'CS001',
-                        matchType: 'CS 2 VS 2',
-                        image: 'assets/images/cs2vs2.png',
-                      ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLudoAndFreeMatchSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 16.0,
-        crossAxisSpacing: 16.0,
-        childAspectRatio: 0.85,
-        children: [
-          _buildTournamentCard(
-            'Ludo',
-            'No Matches Found',
-            'assets/images/ludo.png',
-            textColor: Colors.grey,
-          ),
-          _buildTournamentCard(
-            'Free Match',
-            '22 matches found',
-            'assets/images/free_match.png',
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildTournamentCard(
+    BuildContext context,
     String title,
-    String subtitle,
+    int matchCount,
     String imagePath, {
-    Color? textColor,
     VoidCallback? onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 7,
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
+    final theme = Theme.of(context);
+
+    return Card(
+      elevation: 2,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(imagePath, fit: BoxFit.cover),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.5),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                flex: 3,
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+            ),
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.0,
-                          color: Colors.black,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6.0,
+                          vertical: 2.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Text(
+                          '$matchCount matches',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w300,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4.0),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: textColor ?? Colors.grey[600],
-                          fontSize: 8.0,
-                        ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: theme.colorScheme.primary,
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
