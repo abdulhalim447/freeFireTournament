@@ -4,6 +4,7 @@ import 'package:tournament_app/auth/login_screen.dart';
 import 'package:tournament_app/screens/main_bottom_nav.dart';
 import 'package:tournament_app/services/user_preference.dart';
 
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -62,8 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => isLoggedIn ? BottomNavScreen() : const LoginScreen(),
+        builder: (context) => isLoggedIn ? BottomNavScreen() : LoginScreen(),
       ),
     );
   }

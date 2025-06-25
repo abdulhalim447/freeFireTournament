@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:tournament_app/screens/profile/withdraw_screen.dart';
+import 'package:tournament_app/services/user_preference.dart';
+
 import 'package:tournament_app/models/user_balance_model.dart';
-import 'package:tournament_app/network/network_caller.dart';
+import 'package:tournament_app/providers/profile_provider.dart';
 import 'package:tournament_app/screens/profile/edit_profile_screen.dart';
 import 'package:tournament_app/screens/profile/refer_screen.dart';
 import 'package:tournament_app/screens/profile/top_players_list_screen.dart';
 import 'package:tournament_app/screens/profile/wallet_screen.dart';
-import 'package:tournament_app/screens/profile/withdraw_screen.dart';
-import 'package:tournament_app/services/user_preference.dart';
-import 'package:tournament_app/utils/urls.dart';
+
 import 'package:tournament_app/widgets/show_snackbar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -19,50 +21,27 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  double? userBalance;
-  bool isLoading = false;
-
   @override
   void initState() {
     super.initState();
-    _fetchUserBalance();
+    // Fetch profile data when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchProfileData();
+    });
   }
 
-  Future<void> _fetchUserBalance() async {
-    try {
-      final user = await UserPreference.getUser();
-      final response = await NetworkCaller.postRequest(
-        URLs.getUserBalanceUrl,
-        body: {
-          "user_id": user?.id, // Assuming User model has an 'id' field
-        },
-      );
-
-      if (response.isSuccess) {
-        final balanceData = UserBalanceModel.fromJson(response.responsData);
-        setState(() {
-          userBalance = balanceData.balance;
-          isLoading = false;
-        });
-      } else {
-        showSnackBarMessage(
-          context,
-          'Failed to fetch balance',
-          type: SnackBarType.error,
-        );
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
+  Future<void> _fetchProfileData() async {
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
+    final bool success = await profileProvider.getUserProfile();
+    if (!success && mounted) {
       showSnackBarMessage(
         context,
-        'Error: ${e.toString()}',
+        'Failed to load profile data. Please try again.',
         type: SnackBarType.error,
       );
-      setState(() {
-        isLoading = false;
-      });
     }
   }
 
@@ -73,18 +52,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: RefreshIndicator(
-        onRefresh: () async {
-          await _fetchUserBalance();
-        },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [_buildProfileHeader(context), _buildMenuItems(context)],
+        onRefresh: _fetchProfileData,
+        child: Consumer<ProfileProvider>(
+          builder: (context, profileProvider, child) {
+            final isLoading = profileProvider.isLoading;
+            final userData = profileProvider.profileData?.user;
+
+            if (isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                _buildProfileHeader(context, userData),
+                _buildMenuItems(context),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context) {
+  Widget _buildProfileHeader(BuildContext context, UserData? userData) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -122,28 +113,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     border: Border.all(color: Colors.white, width: 3),
                   ),
-                  child: const CircleAvatar(
-                    backgroundColor: Colors.transparent,
-                    child: Icon(Icons.person, size: 60, color: Colors.white),
-                  ),
+                  child:
+                      userData?.avatar != null
+                          ? CircleAvatar(
+                            backgroundColor: Colors.transparent,
+                            backgroundImage: NetworkImage(userData!.avatar!),
+                          )
+                          : const CircleAvatar(
+                            backgroundColor: Colors.transparent,
+                            child: Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.white,
+                            ),
+                          ),
                 ),
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
                         ),
-                      ],
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.edit,
+                        size: 20,
+                        color: Color(0xFF7C4DFF),
+                      ),
                     ),
-                    child: Icon(Icons.edit, size: 20, color: Color(0xFF7C4DFF)),
                   ),
                 ),
               ],
@@ -154,19 +169,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FutureBuilder(
-                  future: UserPreference.getUser(),
-                  builder: (context, snapshot) {
-                    return Text(
-                      snapshot.data?.userName ?? '',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    );
-                  },
+                Text(
+                  userData?.username ?? 'User',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
@@ -193,11 +203,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildStat('0', 'Matches\nPlayed'),
+                  _buildStat(
+                    userData?.totalPlayed.toString() ?? '0',
+                    'Matches\nPlayed',
+                  ),
                   _buildDivider(),
-                  _buildCentralStat("BDT ${userBalance?.toString() ?? '0'}"),
+                  _buildCentralStat("BDT ${userData?.balance ?? '0'}"),
                   _buildDivider(),
-                  _buildStat('0', 'Matches\nWon'),
+                  _buildStat(
+                    userData?.totalWon.toString() ?? '0',
+                    'Matches\nWon',
+                  ),
                 ],
               ),
             ),
@@ -262,6 +278,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  //all the menu items========================================================
+
   Widget _buildMenuItems(BuildContext context) {
     final menuItems = [
       _MenuItem(
@@ -310,6 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
       ),
+
       _MenuItem(
         icon: Icons.show_chart,
         iconColor: Color(0xFF7C4DFF),
@@ -330,10 +349,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
         subtitle: 'About the developer',
         onTap: () {},
       ),
+      _MenuItem(
+        icon: Icons.logout,
+        iconColor: Colors.red,
+        title: 'Logout',
+        subtitle: 'Sign out from your account',
+        onTap: () => _showLogoutDialog(context),
+      ),
     ];
 
     return Column(
       children: menuItems.map((item) => _buildMenuItem(context, item)).toList(),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Logout',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          content: const Text('Do you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context); // Close dialog
+                await UserPreference.clearUser();
+                if (mounted) {
+                  // Navigate to login screen and clear all routes
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  );
+                }
+              },
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
   }
 

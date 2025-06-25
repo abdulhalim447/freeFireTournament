@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:tournament_app/models/joined_matches_model.dart';
-import 'package:tournament_app/network/network_caller.dart';
-import 'package:tournament_app/utils/urls.dart';
-import 'package:tournament_app/services/user_preference.dart';
+import 'package:provider/provider.dart';
+import 'package:tournament_app/models/today_matches_model.dart';
+import 'package:tournament_app/providers/today_matches_provider.dart';
 
 class MyMatchesScreen extends StatefulWidget {
   const MyMatchesScreen({Key? key}) : super(key: key);
@@ -13,55 +12,12 @@ class MyMatchesScreen extends StatefulWidget {
 }
 
 class _MyMatchesScreenState extends State<MyMatchesScreen> {
-  bool _isLoading = true;
-  List<JoinedMatch> _matches = [];
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    _fetchJoinedMatches();
-  }
-
-  Future<void> _fetchJoinedMatches() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TodayMatchesProvider>().getTodayMatches();
     });
-
-    try {
-      final userId = await UserPreference.getUserId();
-      if (userId == null) {
-        setState(() {
-          _error = 'User not logged in';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final response = await NetworkCaller.postRequest(
-        URLs.getJoinedMatchUrl,
-        body: {'user_id': userId},
-      );
-
-      if (response.isSuccess) {
-        final matchesData = JoinedMatchesModel.fromJson(response.responsData);
-        setState(() {
-          _matches = matchesData.matches;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = response.errorMessage;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
   }
 
   @override
@@ -76,7 +32,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
         backgroundColor: colorScheme.surface,
         centerTitle: true,
         title: Text(
-          'MY MATCHES',
+          'TODAY\'S MATCHES',
           style: TextStyle(
             color: colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -86,33 +42,38 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: _fetchJoinedMatches,
+        onRefresh: () => context.read<TodayMatchesProvider>().getTodayMatches(),
         color: colorScheme.primary,
-        child:
-            _isLoading
-                ? Center(
-                  child: CircularProgressIndicator(color: colorScheme.primary),
-                )
-                : _error != null
-                ? _buildErrorState(colorScheme)
-                : _matches.isEmpty
-                ? _buildEmptyState(colorScheme)
-                : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _matches.length,
-                  itemBuilder: (context, index) {
-                    return _buildMatchCard(
-                      _matches[index],
-                      index + 1,
-                      colorScheme,
-                    );
-                  },
-                ),
+        child: Consumer<TodayMatchesProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading) {
+              return Center(
+                child: CircularProgressIndicator(color: colorScheme.primary),
+              );
+            }
+
+            if (provider.error.isNotEmpty) {
+              return _buildErrorState(colorScheme, provider.error);
+            }
+
+            if (provider.matches.isEmpty) {
+              return _buildEmptyState(colorScheme);
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: provider.matches.length,
+              itemBuilder: (context, index) {
+                return _buildMatchCard(provider.matches[index], colorScheme);
+              },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildErrorState(ColorScheme colorScheme) {
+  Widget _buildErrorState(ColorScheme colorScheme, String error) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -131,7 +92,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              _error!,
+              error,
               style: TextStyle(
                 fontSize: 14,
                 color: colorScheme.onSurfaceVariant,
@@ -141,7 +102,8 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _fetchJoinedMatches,
+            onPressed:
+                () => context.read<TodayMatchesProvider>().getTodayMatches(),
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
           ),
@@ -162,7 +124,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No matches found',
+            'No matches today',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -171,27 +133,21 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Join a tournament to see your matches here',
+            'Check back later for new matches',
             style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.tonal(
-            onPressed: () {
-              // Navigate to tournaments page
-            },
-            child: const Text('Browse Tournaments'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMatchCard(
-    JoinedMatch match,
-    int index,
-    ColorScheme colorScheme,
-  ) {
-    final isFreematch = match.categories == 'FREE MATCH';
+  Widget _buildMatchCard(TodayMatch match, ColorScheme colorScheme) {
+    final startTime = DateFormat(
+      'hh:mm a',
+    ).format(DateFormat('HH:mm:ss').parse(match.matchStartTime));
+    final startDate = DateFormat(
+      'MMM dd, yyyy',
+    ).format(DateTime.parse(match.matchStartDate));
 
     return Card(
       elevation: 0,
@@ -204,155 +160,194 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
           width: 1,
         ),
       ),
-      child: InkWell(
-        onTap: () {
-          // Navigate to match details
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Match number indicator
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
+            // Title and Version Badge
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    match.matchTitle,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      index.toString(),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onPrimaryContainer,
-                      ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    match.version.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onPrimaryContainer,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  // Match details
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                match.matchTitle,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      isFreematch
-                                          ? colorScheme.primary
-                                          : colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today_outlined,
-                              size: 14,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              DateFormat(
-                                'MMM dd, yyyy • hh:mm a',
-                              ).format(DateTime.parse(match.createdAt)),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.secondaryContainer,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Entry: ${match.entryFee} TK',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: colorScheme.onSecondaryContainer,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.tertiaryContainer,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                match.categories,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: colorScheme.onTertiaryContainer,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            // Match ID badge
-            Positioned(
-              top: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(16),
-                    bottomLeft: Radius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  '#${match.matchId}',
+            const SizedBox(height: 12),
+
+            // Date and Time
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 16, color: colorScheme.primary),
+                const SizedBox(width: 4),
+                Text(
+                  startTime,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onPrimaryContainer,
+                    fontSize: 14,
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
+                const SizedBox(width: 16),
+                Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  startDate,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Prize and Entry Fee
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoContainer(
+                    colorScheme,
+                    icon: Icons.emoji_events,
+                    label: 'Prize Pool',
+                    value: '৳${match.totalPrize}',
+                    primary: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildInfoContainer(
+                    colorScheme,
+                    icon: Icons.payments,
+                    label: 'Entry Fee',
+                    value: '৳${match.entryFee}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Entry Types
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  match.entryType.map((type) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiaryContainer,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        type.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onTertiaryContainer,
+                        ),
+                      ),
+                    );
+                  }).toList(),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoContainer(
+    ColorScheme colorScheme, {
+    required IconData icon,
+    required String label,
+    required String value,
+    bool primary = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:
+            primary
+                ? colorScheme.primaryContainer
+                : colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color:
+                primary
+                    ? colorScheme.onPrimaryContainer
+                    : colorScheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        primary
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        primary
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.onSecondaryContainer,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

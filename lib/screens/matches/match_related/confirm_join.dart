@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tournament_app/models/mathces.dart';
-import 'package:tournament_app/models/user_balance_model.dart';
+import 'package:tournament_app/providers/balance_provider.dart';
 import 'package:tournament_app/network/network_caller.dart';
 import 'package:tournament_app/services/user_preference.dart';
 import 'package:tournament_app/utils/urls.dart';
-import 'package:tournament_app/widgets/show_snackbar.dart';
+import 'package:tournament_app/widgets/show_snackbar.dart'
+    show showSnackBarMessage, SnackBarType;
 import 'package:tournament_app/screens/matches/match_related/greeting_screen.dart';
 
 class ConfirmJoinScreen extends StatefulWidget {
   final Matches match;
   final String player1Id;
   final String? player2Id;
+  final String? player3Id;
+  final String? player4Id;
   final String entryType;
 
   const ConfirmJoinScreen({
@@ -18,6 +22,8 @@ class ConfirmJoinScreen extends StatefulWidget {
     required this.match,
     required this.player1Id,
     this.player2Id,
+    this.player3Id,
+    this.player4Id,
     required this.entryType,
   }) : super(key: key);
 
@@ -26,56 +32,21 @@ class ConfirmJoinScreen extends StatefulWidget {
 }
 
 class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
-  double? userBalance;
   bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserBalance();
-  }
-
-  Future<void> _fetchUserBalance() async {
-    try {
-      final user = await UserPreference.getUser();
-      final response = await NetworkCaller.postRequest(
-        URLs.getUserBalanceUrl,
-        body: {
-          "user_id": user?.id, // Assuming User model has an 'id' field
-        },
-      );
-
-      if (response.isSuccess) {
-        final balanceData = UserBalanceModel.fromJson(response.responsData);
-        setState(() {
-          userBalance = balanceData.balance;
-          isLoading = false;
-        });
-      } else {
-        showSnackBarMessage(
-          context,
-          'Failed to fetch balance',
-          type: SnackBarType.error,
-        );
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      showSnackBarMessage(
-        context,
-        'Error: ${e.toString()}',
-        type: SnackBarType.error,
-      );
-      setState(() {
-        isLoading = false;
-      });
-    }
+    // Fetch balance when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BalanceProvider>().fetchBalance();
+    });
   }
 
   bool get _hasEnoughBalance {
-    if (userBalance == null || widget.match.entryFee == null) return false;
-    return userBalance! >= widget.match.entryFee!;
+    final balance =
+        double.tryParse(context.read<BalanceProvider>().balance) ?? 0.0;
+    return balance >= (widget.match.entryFee ?? 0.0);
   }
 
   @override
@@ -171,30 +142,67 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.account_balance_wallet, color: Colors.purple),
-                  SizedBox(width: 8),
-                  Text(
-                    'Balance: ',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple,
-                    ),
-                  ),
-                  Spacer(),
-                  Text(
-                    isLoading
-                        ? 'Loading...'
-                        : '${userBalance?.toStringAsFixed(2) ?? '0.00'} TK',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple,
-                    ),
-                  ),
-                ],
+              Consumer<BalanceProvider>(
+                builder: (context, balanceProvider, child) {
+                  final balance =
+                      double.tryParse(balanceProvider.balance) ?? 0.0;
+                  final entryFee = widget.match.entryFee ?? 0.0;
+                  final hasEnoughBalance = balance >= entryFee;
+
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet,
+                            color:
+                                hasEnoughBalance ? Colors.purple : Colors.red,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Balance: ',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  hasEnoughBalance ? Colors.purple : Colors.red,
+                            ),
+                          ),
+                          Spacer(),
+                          Text(
+                            balanceProvider.isLoading
+                                ? 'Loading...'
+                                : '${balanceProvider.balance} TK',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  hasEnoughBalance ? Colors.purple : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (!hasEnoughBalance) ...[
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.warning, color: Colors.red, size: 16),
+                            SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Insufficient balance. Required: ${widget.match.entryFee} TK',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -289,9 +297,12 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
               ),
               Divider(color: Colors.purple.withOpacity(0.3)),
               _buildDetailRow('Player 1 ID', widget.player1Id, Icons.person),
-              if (widget.entryType.toLowerCase() == 'duo' &&
-                  widget.player2Id != null)
+              if (widget.player2Id != null)
                 _buildDetailRow('Player 2 ID', widget.player2Id!, Icons.person),
+              if (widget.player3Id != null)
+                _buildDetailRow('Player 3 ID', widget.player3Id!, Icons.person),
+              if (widget.player4Id != null)
+                _buildDetailRow('Player 4 ID', widget.player4Id!, Icons.person),
             ],
           ),
         ),
@@ -361,7 +372,7 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
             SizedBox(width: 16),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _handleConfirmJoin(context),
+                onPressed: () => _handleJoinMatch(),
                 icon:
                     isLoading
                         ? CircularProgressIndicator(color: Colors.white)
@@ -383,130 +394,113 @@ class _ConfirmJoinScreenState extends State<ConfirmJoinScreen> {
     );
   }
 
-  Future<void> _handleConfirmJoin(BuildContext context) async {
-    isLoading = true;
-    if (mounted) {
-      setState(() {});
-    }
+  void _navigateToGreetingScreen() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => ReservationScreen(
+              match: widget.match,
+              player1Id: widget.player1Id,
+              player2Id: widget.player2Id,
+              player3Id: widget.player3Id,
+              player4Id: widget.player4Id,
+            ),
+      ),
+    );
+  }
 
+  Future<void> _handleJoinMatch() async {
     if (!_hasEnoughBalance) {
       showSnackBarMessage(
         context,
-        'Insufficient balance to join the match. Required: ${widget.match.entryFee} TK, Your Balance: ${userBalance?.toStringAsFixed(2)} TK',
+        'Insufficient balance to join the match',
         type: SnackBarType.error,
       );
       return;
     }
 
+    setState(() {
+      isLoading = true;
+    });
+
     try {
-      // Show loading indica
-      // Get user ID
-      final userId = await UserPreference.getUserId();
-      if (userId == null) {
-        // Close loading indicator
-      
-        showSnackBarMessage(
-          context,
-          'User not found. Please login again.',
-          type: SnackBarType.error,
-        );
-        return;
+      // Prepare players list
+      List<Map<String, String>> players = [
+        {"player_name": widget.player1Id, "player_id": widget.player1Id},
+      ];
+
+      if (widget.player2Id != null) {
+        players.add({
+          "player_name": widget.player2Id!,
+          "player_id": widget.player2Id!,
+        });
+      }
+      if (widget.player3Id != null) {
+        players.add({
+          "player_name": widget.player3Id!,
+          "player_id": widget.player3Id!,
+        });
+      }
+      if (widget.player4Id != null) {
+        players.add({
+          "player_name": widget.player4Id!,
+          "player_id": widget.player4Id!,
+        });
       }
 
-      // Prepare the data for API call
-      final joinData = {
-        'match_id': widget.match.id,
-        'user_id': userId,
-        'match_title': widget.match.matchTitle,
-        'player1_id': widget.player1Id,
-        if (widget.player2Id != null) 'player2_id': widget.player2Id,
-        'entry_fee': widget.match.entryFee?.toString(),
-        'entry_type': widget.entryType.toLowerCase(),
-        'categories': widget.match.categories,
-        'match_start_time': widget.match.matchStartTime,
-        'match_start_date': widget.match.matchStartDate,
+      // Prepare request body
+      final Map<String, dynamic> requestBody = {
+        "match_info_id": widget.match.id,
+        "team_name": widget.player1Id, // Using player1Id as team name
+        "team_logo": "", // Empty as it's optional
+        "join_type":
+            widget.entryType.toLowerCase(), // Convert to lowercase for API
+        "players": players,
       };
 
-      // Make API call to join match
+      // Make API call
       final response = await NetworkCaller.postRequest(
-        URLs.joinedMatchUrl,
-        body: joinData,
+        URLs.joinMatchUrl,
+        body: requestBody,
       );
-      isLoading = false;
-      if (mounted) {
-        setState(() {});
-      }
-
-      if (!mounted) return;
-
-      
 
       if (response.isSuccess) {
-        // Decrease user balance
-        final decreaseBalanceResponse = await NetworkCaller.postRequest(
-          URLs.decrementBalanceUrl,
-          body: {"user_id": userId, "amount": widget.match.entryFee},
-        );
+        // Update balance after successful join
+        await context.read<BalanceProvider>().fetchBalance();
 
-        if (!decreaseBalanceResponse.isSuccess) {
+        // Show success message
+        if (mounted) {
           showSnackBarMessage(
             context,
-            'Failed to update balance: ${decreaseBalanceResponse.errorMessage}',
+            'Successfully joined the match',
+            type: SnackBarType.success,
+          );
+          _navigateToGreetingScreen();
+        }
+      } else {
+        if (mounted) {
+          showSnackBarMessage(
+            context,
+            response.errorMessage ?? 'Failed to join match',
             type: SnackBarType.error,
           );
-          return;
         }
-
-        showSnackBarMessage(
-          context,
-          'Successfully joined the match!',
-          type: SnackBarType.success,
-        );
-
-        // Navigate to the reservation screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => ReservationScreen(
-                  match: widget.match,
-                  player1Id: widget.player1Id,
-                  player2Id: widget.player2Id,
-                ),
-          ),
-        );
-      } else {
-        isLoading = false;
-        if (mounted) {
-          setState(() {});
-        }
-
-        // Enhanced error message handling
-        String errorMsg = response.errorMessage ?? 'Failed to join match';
-        if (response.responsData != null &&
-            response.responsData['message'] != null) {
-          errorMsg = response.responsData['message'].toString();
-        }
-
-        showSnackBarMessage(context, errorMsg, type: SnackBarType.error);
       }
     } catch (e) {
-      isLoading = false;
       if (mounted) {
-        setState(() {});
+        showSnackBarMessage(
+          context,
+          'An error occurred: $e',
+          type: SnackBarType.error,
+        );
       }
-      if (!mounted) return;
-
-      // Ensure loading indicator is closed in case of error
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
       }
-
-      showSnackBarMessage(
-        context,
-        'Error: ${e.toString()}',
-        type: SnackBarType.error,
-      );
     }
   }
 }

@@ -8,7 +8,7 @@ class Matches {
   int? totalPrize;
   int? perKill;
   int? entryFee;
-  String? entryType;
+  List<String>? entryType;
   int? fullSlot;
   String? version;
   String? detailes;
@@ -44,6 +44,16 @@ class Matches {
   });
 
   Matches.fromJson(Map<String, dynamic> json) {
+    // Handle entry type that could be either a string or a list
+    List<String> parseEntryType(dynamic entryTypeData) {
+      if (entryTypeData == null) return [];
+      if (entryTypeData is String) return [entryTypeData];
+      if (entryTypeData is List) {
+        return entryTypeData.map((e) => e.toString()).toList();
+      }
+      return [];
+    }
+
     id = json['id']?.toString();
     categories = json['categories'];
     matchTitle = json['match_title'];
@@ -53,7 +63,7 @@ class Matches {
     totalPrize = json['total_prize'];
     perKill = json['per_kill'];
     entryFee = json['entry_fee'];
-    entryType = json['entry_type'];
+    entryType = parseEntryType(json['entry_type']);
     fullSlot = json['full_slot'];
     version = json['version'];
     detailes = json['detailes'];

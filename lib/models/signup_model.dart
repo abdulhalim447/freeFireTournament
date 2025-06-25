@@ -1,35 +1,41 @@
 class SignUpModel {
-  String userName;
+  String name;
   String email;
-  String mobileNumber;
+  String username;
+  String phone;
   String password;
-  String reffer;
+  String passwordConfirmation;
+  String referralCodeUsed;
 
   SignUpModel({
-    required this.userName,
+    required this.name,
     required this.email,
-    required this.mobileNumber,
+    required this.username,
+    required this.phone,
     required this.password,
-    this.reffer = '',
+    required this.passwordConfirmation,
+    this.referralCodeUsed = 'REF12365',
   });
 
   factory SignUpModel.fromJson(Map<String, dynamic> json) {
     return SignUpModel(
-      userName: json['user_name'],
+      name: json['name'],
       email: json['email'],
-      mobileNumber: json['mobile_number'],
+      username: json['username'],
+      phone: json['phone'],
       password: json['password'],
-      reffer: json['reffer'] ?? '',
+      passwordConfirmation: json['password_confirmation'],
+      referralCodeUsed: json['referral_code_used'] ?? 'REF12365',
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'user_name': userName,
-        'email': email,
-        'mobile_number': mobileNumber,
-        'password': password,
-        'reffer': reffer,
-      };
+    'name': name,
+    'email': email,
+    'username': username,
+    'phone': phone,
+    'password': password,
+    'password_confirmation': passwordConfirmation,
+    'referral_code_used': referralCodeUsed,
+  };
 }
-
-

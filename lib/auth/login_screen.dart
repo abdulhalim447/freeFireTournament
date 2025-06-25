@@ -1,363 +1,343 @@
-import 'package:flutter/material.dart';
 import 'package:tournament_app/auth/signup_screen.dart';
-import 'package:tournament_app/models/login_model.dart';
-import 'package:tournament_app/network/network_caller.dart';
-import 'package:tournament_app/network/network_response.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:provider/provider.dart';
+import 'package:tournament_app/controllers/login_controller.dart';
+import 'package:tournament_app/services/auth_service.dart';
 import 'package:tournament_app/screens/main_bottom_nav.dart';
-import 'package:tournament_app/services/user_preference.dart';
-import 'package:tournament_app/utils/urls.dart';
 import 'package:tournament_app/widgets/show_snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  bool _isPasswordVisible = false;
-  bool _isLoading = false;
-
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-
   @override
   Widget build(BuildContext context) {
+    // Initialize GetX controller
+    final LoginController controller = Get.put(LoginController());
+
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50),
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
-      body: Column(
+      backgroundColor: Colors.black,
+      body: Stack(
         children: [
-          const Expanded(
-            flex: 2,
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Welcome Back",
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
+          // Top black and white containers
+          Column(
+            children: [
+              Container(
+                height: 160,
+                color: Colors.white,
+                alignment: Alignment.centerLeft,
+                padding: EdgeInsets.only(left: 30, top: 110),
+                child: Text(
+                  "Play Games",
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                height: 120,
+                color: Colors.black,
+                alignment: Alignment.topLeft,
+                padding: EdgeInsets.only(left: 30),
+                child: Text(
+                  "Get real money",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  SizedBox(height: 16),
-                  Text(
-                    "Sign in to continue",
-                    style: TextStyle(fontSize: 20, color: Colors.white70),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
+              ),
+            ],
+          ),
+
+          // Coffee logo on the right side
+          Positioned(
+            top: 120,
+            right: 30,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/icons/profile.png',
+                width: 70,
+                height: 70,
               ),
             ),
           ),
-          Expanded(
-            flex: 3,
+
+          // Main white container with curved corner
+          Positioned(
+            top: 280,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(32),
-                  topRight: Radius.circular(32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    spreadRadius: 0,
-                  ),
-                ],
+                borderRadius: BorderRadius.only(topRight: Radius.circular(60)),
               ),
+              padding: EdgeInsets.all(30),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                 child: Form(
-                  key: _formKey,
+                  key: controller.formKey,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTextField(
-                        controller: _usernameController,
-                        label: 'Username',
-                        prefixIcon: Icons.person_outline,
-                        enabled: !_isLoading,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your username';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      _buildTextField(
-                        controller: _passwordController,
-                        label: 'Password',
-                        prefixIcon: Icons.lock_outline,
-                        obscureText: !_isPasswordVisible,
-                        enabled: !_isLoading,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Colors.grey,
-                          ),
-                          onPressed:
-                              _isLoading
-                                  ? null
-                                  : () {
-                                    setState(() {
-                                      _isPasswordVisible = !_isPasswordVisible;
-                                    });
-                                  },
+                      SizedBox(height: 20),
+                      Text(
+                        "Login",
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
                       ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed:
-                              _isLoading
-                                  ? null
-                                  : () {
-                                    // TODO: Implement forgot password
-                                  },
+                      SizedBox(height: 40),
+
+                      // Login field (Email/Username/Phone)
+                      TextFormField(
+                        controller: controller.loginController,
+                        validator: controller.validateLogin,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: "Email, Username, or Phone",
+                          hintText: "Enter your email, username, or phone",
+                          labelStyle: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[400]!),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+
+                      // Password field
+                      Obx(() => TextFormField(
+                        controller: controller.passwordController,
+                        validator: controller.validatePassword,
+                        obscureText: !controller.isPasswordVisible.value,
+                        decoration: InputDecoration(
+                          labelText: "Password",
+                          hintText: "Enter your password",
+                          labelStyle: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              controller.isPasswordVisible.value
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey[600],
+                            ),
+                            onPressed: controller.togglePasswordVisibility,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[400]!),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                        ),
+                      )),
+                    SizedBox(height: 16),
+
+                    // Forgot password and Create account in single row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           child: Text(
-                            'Forgot Password?',
+                            "Forgot password?",
                             style: TextStyle(
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                              fontSize: 12,
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SignUpScreen(),
+                              ),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          elevation: 2,
+                          child: Text(
+                            "Create an account",
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                        child:
-                            _isLoading
-                                ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
+                      ],
+                    ),
+                      SizedBox(height: 30),
+
+                      // Sign in button
+                      Consumer<AuthService>(
+                        builder: (context, authService, child) {
+                          return Align(
+                            alignment: Alignment.center,
+                            child: GestureDetector(
+                              onTap: authService.isLoading ? null : () => _handleLogin(context, controller, authService),
+                              child: Container(
+                                width: 180,
+                                height: 45,
+                                decoration: BoxDecoration(
+                                  color: authService.isLoading ? Colors.grey : Colors.black,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(20),
+                                    bottomLeft: Radius.circular(5),
+                                    bottomRight: Radius.circular(20),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black,
+                                      offset: Offset(0, 4),
                                     ),
-                                  ),
-                                )
-                                : const Text(
-                                  'Sign In',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  ],
                                 ),
-                      ),
-                      const SizedBox(height: 24),
-                      if (!_isLoading)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              "Don't have an account? ",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const SignUpScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Sign Up',
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.bold,
+                                child: Center(
+                                  child: authService.isLoading
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          "Sign in",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                 ),
                               ),
                             ),
-                          ],
+                          );
+                        },
+                      ),
+
+                    SizedBox(height: 20),
+                    Align(
+                      alignment: Alignment.center,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) =>
+                                      SignUpScreen(), // Navigate to LoginScreen
+                            ),
+                          );
+                        },
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: "Don't have an account? ",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              TextSpan(
+                                text: "Register",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+      )],
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData prefixIcon,
-    bool obscureText = false,
-    bool enabled = true,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      validator: validator,
-      enabled: enabled,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(prefixIcon, color: Colors.grey),
-        suffixIcon: suffixIcon,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Theme.of(context).primaryColor,
-            width: 2,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-    );
-  }
-
-// methods are here
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  void _clearTextFields() {
-    _usernameController.clear();
-    _passwordController.clear();
-    setState(() {
-      _isPasswordVisible = false;
-    });
-  }
-
-  Future<void> _handleLogin() async {
-    if (!mounted) return;
-
-    if (_formKey.currentState!.validate()) {
-      try {
-        setState(() => _isLoading = true);
-
-        // Prepare login data
-        final loginData = {
-          'user_name': _usernameController.text.trim(),
-          'password': _passwordController.text,
-        };
-
-        // Make API call
-        final NetworkResponse response = await NetworkCaller.postRequest(
-          URLs.loginUrl,
-          body: loginData,
-        );
-
-        if (!mounted) return;
-
-        if (response.isSuccess) {
-          // Parse response
-          final loginModel = LoginModel.fromJson(response.responsData);
-
-          if (loginModel.success == true && loginModel.user != null) {
-            // Save user data
-            await UserPreference.saveUser(loginModel.user!);
-            await UserPreference.setLoggedIn(true);
-
-            // Clear fields
-            _clearTextFields();
-
-            // Show success message
-            showSnackBarMessage(
-              context,
-              loginModel.message ?? 'Login successful!',
-              type: SnackBarType.success,
-            );
-
-            // TODO: Navigate to home screen
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => BottomNavScreen()),
-            );
-          } else {
-            showSnackBarMessage(
-              context,
-              loginModel.message ?? 'Login failed',
-              type: SnackBarType.error,
-            );
-          }
-        } else {
-          showSnackBarMessage(
-            context,
-            response.errorMessage ?? 'Login failed',
-            type: SnackBarType.error,
-          );
-        }
-      } catch (e) {
-        if (!mounted) return;
-        showSnackBarMessage(
-          context,
-          'Error: ${e.toString()}',
-          type: SnackBarType.error,
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+  // Handle login process
+  Future<void> _handleLogin(BuildContext context, LoginController controller, AuthService authService) async {
+    if (!controller.formKey.currentState!.validate()) {
+      if (context.mounted) {
+        showSnackBarMessage(context, 'Please fill all fields correctly', type: SnackBarType.error);
       }
+      return;
+    }
+
+    // Clear any previous errors
+    authService.clearError();
+
+    final success = await authService.login(
+      login: controller.loginController.text.trim(),
+      password: controller.passwordController.text.trim(),
+    );
+
+    if (!context.mounted) return;
+
+    if (success) {
+      showSnackBarMessage(context, 'Login successful!', type: SnackBarType.success);
+      controller.clearForm();
+
+      // Navigate to main app
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => BottomNavScreen()),
+        (route) => false,
+      );
+    } else {
+      showSnackBarMessage(
+        context,
+        authService.errorMessage ?? 'Login failed',
+        type: SnackBarType.error
+      );
     }
   }
-
-
-
-
-
-
-
 }

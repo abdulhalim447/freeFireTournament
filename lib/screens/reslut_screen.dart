@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../models/result_match_model.dart';
+import '../providers/result_provider.dart';
+import '../providers/result_matches_provider.dart';
 
 class ResultScreen extends StatefulWidget {
   const ResultScreen({Key? key}) : super(key: key);
@@ -10,87 +14,47 @@ class ResultScreen extends StatefulWidget {
 
 class _ResultScreenState extends State<ResultScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  // Sample data that will be replaced with API data
-  final List<GameMatch> _matches = [
-    GameMatch(
-      id: '#11189',
-      title: 'Survival Match | [ Vehicle On ]',
-      datetime: DateTime(2025, 5, 2, 20, 30),
-      image: 'assets/images/freefire.png',
-      winPrize: 405,
-      entryType: 'Solo',
-      entryFee: 10,
-      perKill: 0,
-      map: 'Bermuda',
-      version: 'MOBILE',
-    ),
-    GameMatch(
-      id: '#11188',
-      title: 'Survival Match | [ Vehicle On ]',
-      datetime: DateTime(2025, 5, 2, 20, 0),
-      image: 'assets/images/freefire.png',
-      winPrize: 405,
-      entryType: 'Solo',
-      entryFee: 10,
-      perKill: 0,
-      map: 'Bermuda',
-      version: 'MOBILE',
-    ),
-    GameMatch(
-      id: '#11187',
-      title: 'BR Match | Room ID & Pass 9:30 PM',
-      datetime: DateTime(2025, 5, 2, 21, 30),
-      image: 'assets/images/freefire.png',
-      winPrize: 500,
-      entryType: 'Duo',
-      entryFee: 20,
-      perKill: 5,
-      map: 'Kalahari',
-      version: 'MOBILE',
-    ),
-    GameMatch(
-      id: '#11186',
-      title: 'CS Match | Squad Tournament',
-      datetime: DateTime(2025, 5, 2, 22, 0),
-      image: 'assets/images/clash_squad.png',
-      winPrize: 800,
-      entryType: 'Squad',
-      entryFee: 30,
-      perKill: 10,
-      map: 'Bermuda',
-      version: 'MOBILE',
-    ),
-  ];
-
-  // Tab titles from home screen
-  final List<String> _tabTitles = [
-    'FF FULLMAP',
-    'FF Clash Squad',
-    'Lone Wolf',
-    'CS 2 VS 2',
-    'Ludo',
-    'Free Match',
-  ];
+  TabController? _tabController;
+  int _selectedTabIndex = 0;
+  bool _isTabControllerInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabTitles.length, vsync: this);
-    _tabController.addListener(_handleTabSelection);
+    // Don't create TabController here - we'll create it when we get data
+
+    // Fetch subcategories (tab titles) when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ResultProvider>().getResultTopTitles();
+    });
   }
 
-  void _handleTabSelection() {
-    if (_tabController.indexIsChanging) {
-      setState(() {});
+  // Initialize tab controller once we have the data
+  void _initTabController(int length) {
+    if (_tabController != null) {
+      _tabController!.dispose();
     }
+
+    _tabController = TabController(
+      length: length,
+      vsync: this,
+      initialIndex: _selectedTabIndex < length ? _selectedTabIndex : 0,
+    );
+
+    _tabController!.addListener(() {
+      if (_tabController!.indexIsChanging) {
+        setState(() {
+          _selectedTabIndex = _tabController!.index;
+        });
+      }
+    });
+
+    _isTabControllerInitialized = true;
   }
 
   @override
   void dispose() {
-    _tabController.removeListener(_handleTabSelection);
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -129,70 +93,172 @@ class _ResultScreenState extends State<ResultScreen>
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(50),
-          child: Container(
-            height: 50,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              children: List.generate(_tabTitles.length, (index) {
-                final isActive = _tabController.index == index;
-                return GestureDetector(
-                  onTap: () {
-                    _tabController.animateTo(index);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 22.0,
-                      vertical: 8.0,
-                    ),
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 4.0,
-                      vertical: 5.0,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25.0),
-                      color:
-                          isActive
-                              ? Colors.amber.shade500
-                              : Colors.lightBlue.shade100,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _tabTitles[index],
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight:
-                              isActive ? FontWeight.bold : FontWeight.w500,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
+          child: Consumer<ResultProvider>(
+            builder: (context, provider, child) {
+              if (provider.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (provider.errorMessage.isNotEmpty) {
+                return Center(
+                  child: Text(
+                    provider.errorMessage,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 );
-              }),
-            ),
+              }
+
+              if (provider.subCategories.isEmpty) {
+                return const Center(child: Text('No results found'));
+              }
+
+              // Initialize tab controller if not already done or if count changed
+              if (!_isTabControllerInitialized ||
+                  _tabController?.length != provider.subCategories.length) {
+                _initTabController(provider.subCategories.length);
+              }
+
+              // Only the tab titles come from the API
+              return Container(
+                height: 50,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  itemCount: provider.subCategories.length,
+                  itemBuilder: (context, index) {
+                    final isActive = _tabController!.index == index;
+                    final subcategory = provider.subCategories[index];
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedTabIndex = index;
+                          _tabController!.animateTo(index);
+                        });
+
+                        // Fetch result matches for the selected subcategory
+                        context
+                            .read<ResultMatchesProvider>()
+                            .fetchResultMatches(subcategory.id);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 22.0,
+                          vertical: 8.0,
+                        ),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 4.0,
+                          vertical: 5.0,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(25.0),
+                          color:
+                              isActive
+                                  ? Colors.amber.shade500
+                                  : Colors.lightBlue.shade100,
+                        ),
+                        child: Center(
+                          child: Text(
+                            subcategory.name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight:
+                                  isActive ? FontWeight.bold : FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ),
       ),
-      body: PageView.builder(
-        controller: PageController(initialPage: _tabController.index),
-        onPageChanged: (index) {
-          _tabController.animateTo(index);
-        },
-        itemCount: _tabTitles.length,
-        itemBuilder: (context, index) {
-          // In a real app, you would filter the matches based on tab index
-          final matches = _matches;
+      body: Consumer2<ResultProvider, ResultMatchesProvider>(
+        builder: (context, resultProvider, matchesProvider, _) {
+          if (resultProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          return matches.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
+          if (resultProvider.subCategories.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          // If tab controller not initialized, show loading
+          if (_tabController == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // Make sure at least one tab is selected
+          if (_selectedTabIndex >= resultProvider.subCategories.length) {
+            _selectedTabIndex = 0;
+          }
+
+          // Get the currently selected subcategory
+          final selectedSubcategory =
+              resultProvider.subCategories[_selectedTabIndex];
+
+          // If we haven't loaded matches for this subcategory yet, do it now
+          if (!matchesProvider.hasMatchesForSubcategory(
+            selectedSubcategory.id,
+          )) {
+            // Start fetching if not already loading
+            if (!matchesProvider.isLoading) {
+              Future.microtask(
+                () =>
+                    matchesProvider.fetchResultMatches(selectedSubcategory.id),
+              );
+              return const Center(child: CircularProgressIndicator());
+            } else {
+              return const Center(child: CircularProgressIndicator());
+            }
+          }
+
+          // Get the matches for this subcategory
+          final matches = matchesProvider.getMatchesForSubcategory(
+            selectedSubcategory.id,
+          );
+
+          return PageView.builder(
+            controller: PageController(initialPage: _selectedTabIndex),
+            onPageChanged: (index) {
+              setState(() {
+                _selectedTabIndex = index;
+                _tabController!.animateTo(index);
+              });
+
+              // Fetch matches for the newly selected subcategory
+              final newSubcategory = resultProvider.subCategories[index];
+              if (!matchesProvider.hasMatchesForSubcategory(
+                newSubcategory.id,
+              )) {
+                matchesProvider.fetchResultMatches(newSubcategory.id);
+              }
+            },
+            itemCount: resultProvider.subCategories.length,
+            itemBuilder: (context, index) {
+              final subcategory = resultProvider.subCategories[index];
+              final subcategoryMatches = matchesProvider
+                  .getMatchesForSubcategory(subcategory.id);
+
+              // Show empty state if no matches for this subcategory
+              if (subcategoryMatches.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              // Show the list of matches
+              return ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: matches.length,
+                itemCount: subcategoryMatches.length,
                 itemBuilder: (context, matchIndex) {
-                  return _buildMatchCard(matches[matchIndex]);
+                  return _buildMatchCard(subcategoryMatches[matchIndex]);
                 },
               );
+            },
+          );
         },
       ),
     );
@@ -223,7 +289,7 @@ class _ResultScreenState extends State<ResultScreen>
     );
   }
 
-  Widget _buildMatchCard(GameMatch match) {
+  Widget _buildMatchCard(ResultMatch match) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -255,12 +321,27 @@ class _ResultScreenState extends State<ResultScreen>
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        match.image,
-                        width: 90,
-                        height: 65,
-                        fit: BoxFit.cover,
-                      ),
+                      child:
+                          match.image != null
+                              ? Image.network(
+                                match.image!,
+                                width: 90,
+                                height: 65,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (context, error, stackTrace) => Image.asset(
+                                      'assets/images/freefire.png',
+                                      width: 90,
+                                      height: 65,
+                                      fit: BoxFit.cover,
+                                    ),
+                              )
+                              : Image.asset(
+                                'assets/images/freefire.png',
+                                width: 90,
+                                height: 65,
+                                fit: BoxFit.cover,
+                              ),
                     ),
                   ),
                   Expanded(
@@ -270,7 +351,7 @@ class _ResultScreenState extends State<ResultScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            match.title,
+                            match.matchTitle,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -279,9 +360,7 @@ class _ResultScreenState extends State<ResultScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            DateFormat('yyyy-MM-dd').format(match.datetime) +
-                                ' at ' +
-                                DateFormat('hh:mm a').format(match.datetime),
+                            _formatDateTime(match),
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.red[700],
@@ -309,19 +388,21 @@ class _ResultScreenState extends State<ResultScreen>
                         Expanded(
                           child: _buildDetailItem(
                             'WIN PRIZE',
-                            '${match.winPrize} TK',
+                            '${match.totalPrize} TK',
                           ),
                         ),
                         Expanded(
                           child: _buildDetailItem(
                             'ENTRY TYPE',
-                            match.entryType,
+                            match.entryType.isNotEmpty
+                                ? match.entryType.first.toUpperCase()
+                                : 'N/A',
                           ),
                         ),
                         Expanded(
                           child: _buildDetailItem(
                             'ENTRY FEE',
-                            match.entryFee.toString(),
+                            '${match.entryFee} TK',
                           ),
                         ),
                       ],
@@ -334,10 +415,12 @@ class _ResultScreenState extends State<ResultScreen>
                         Expanded(
                           child: _buildDetailItem(
                             'PER KILL',
-                            match.perKill.toString(),
+                            '${match.perKill} TK',
                           ),
                         ),
-                        Expanded(child: _buildDetailItem('MAP', match.map)),
+                        Expanded(
+                          child: _buildDetailItem('MAP', match.matchMap),
+                        ),
                         Expanded(
                           child: _buildDetailItem('VERSION', match.version),
                         ),
@@ -363,7 +446,7 @@ class _ResultScreenState extends State<ResultScreen>
                 ),
               ),
               child: Text(
-                match.id,
+                '#${match.id}',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -375,6 +458,15 @@ class _ResultScreenState extends State<ResultScreen>
         ],
       ),
     );
+  }
+
+  String _formatDateTime(ResultMatch match) {
+    try {
+      final DateTime dateTime = match.getMatchDateTime();
+      return '${DateFormat('yyyy-MM-dd').format(dateTime)} at ${DateFormat('hh:mm a').format(dateTime)}';
+    } catch (e) {
+      return '${match.matchStartDate} at ${match.matchStartTime}';
+    }
   }
 
   Widget _buildDetailItem(String label, String value) {
@@ -403,30 +495,4 @@ class _ResultScreenState extends State<ResultScreen>
       ],
     );
   }
-}
-
-class GameMatch {
-  final String id;
-  final String title;
-  final DateTime datetime;
-  final String image;
-  final int winPrize;
-  final String entryType;
-  final int entryFee;
-  final int perKill;
-  final String map;
-  final String version;
-
-  GameMatch({
-    required this.id,
-    required this.title,
-    required this.datetime,
-    required this.image,
-    required this.winPrize,
-    required this.entryType,
-    required this.entryFee,
-    required this.perKill,
-    required this.map,
-    required this.version,
-  });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tournament_app/models/mathces.dart';
+import 'package:tournament_app/screens/main_bottom_nav.dart';
 import 'package:tournament_app/services/user_preference.dart';
 import 'package:tournament_app/widgets/show_snackbar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -8,12 +9,16 @@ class ReservationScreen extends StatefulWidget {
   final Matches match;
   final String player1Id;
   final String? player2Id;
+  final String? player3Id;
+  final String? player4Id;
 
   const ReservationScreen({
     Key? key,
     required this.match,
     required this.player1Id,
     this.player2Id,
+    this.player3Id,
+    this.player4Id,
   }) : super(key: key);
 
   @override
@@ -248,6 +253,14 @@ class _ReservationScreenState extends State<ReservationScreen>
               const SizedBox(height: 12),
               _buildPlayerRow("Player 2", widget.player2Id!),
             ],
+            if (widget.player3Id != null) ...[
+              const SizedBox(height: 12),
+              _buildPlayerRow("Player 3", widget.player3Id!),
+            ],
+            if (widget.player4Id != null) ...[
+              const SizedBox(height: 12),
+              _buildPlayerRow("Player 4", widget.player4Id!),
+            ],
           ],
         ),
       ),
@@ -381,7 +394,11 @@ class _ReservationScreenState extends State<ReservationScreen>
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => BottomNavScreen()),
+                ),
             icon: Icon(Icons.check_circle_outline),
             label: Text("Done"),
             style: ElevatedButton.styleFrom(
