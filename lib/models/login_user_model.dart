@@ -6,7 +6,7 @@ class User {
   String? balance;
   String? phone;
   String? avatar;
-  int? isActive;
+  bool? isActive;
   String? referralCode;
   String? referralCodeUsed;
 
@@ -31,7 +31,16 @@ class User {
     balance = json['balance'];
     phone = json['phone'];
     avatar = json['avatar'];
-    isActive = json['is_active'];
+
+    // Handle both boolean and integer values for is_active
+    if (json['is_active'] is bool) {
+      isActive = json['is_active'];
+    } else if (json['is_active'] is int) {
+      isActive = json['is_active'] == 1;
+    } else {
+      isActive = false;
+    }
+
     referralCode = json['referral_code'];
     referralCodeUsed = json['referral_code_used'];
   }

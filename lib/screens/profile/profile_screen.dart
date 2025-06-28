@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:tournament_app/auth/login_screen.dart';
 import 'package:tournament_app/screens/profile/withdraw_screen.dart';
 import 'package:tournament_app/services/user_preference.dart';
 
@@ -384,9 +385,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await UserPreference.clearUser();
                 if (mounted) {
                   // Navigate to login screen and clear all routes
-                  Navigator.pushNamedAndRemoveUntil(
+                  Navigator.pushAndRemoveUntil(
                     context,
-                    '/login',
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
                     (route) => false,
                   );
                 }

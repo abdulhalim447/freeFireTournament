@@ -17,6 +17,7 @@ import 'package:tournament_app/providers/today_matches_provider.dart';
 import 'package:tournament_app/providers/subcategory_matches_provider.dart';
 import 'providers/result_provider.dart';
 import 'providers/result_matches_provider.dart';
+import 'providers/prizing_result_provider.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -44,6 +45,7 @@ class _MainAppState extends State<MainApp> {
         ChangeNotifierProvider(create: (_) => SubcategoryMatchesProvider()),
         ChangeNotifierProvider(create: (_) => ResultProvider()),
         ChangeNotifierProvider(create: (_) => ResultMatchesProvider()),
+        ChangeNotifierProvider(create: (_) => PrizingResultProvider()),
       ],
       child: GetMaterialApp(
         debugShowCheckedModeBanner: false,

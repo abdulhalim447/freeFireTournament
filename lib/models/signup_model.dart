@@ -14,7 +14,7 @@ class SignUpModel {
     required this.phone,
     required this.password,
     required this.passwordConfirmation,
-    this.referralCodeUsed = 'REF12365',
+    this.referralCodeUsed = 'REF12345',
   });
 
   factory SignUpModel.fromJson(Map<String, dynamic> json) {
@@ -25,7 +25,7 @@ class SignUpModel {
       phone: json['phone'],
       password: json['password'],
       passwordConfirmation: json['password_confirmation'],
-      referralCodeUsed: json['referral_code_used'] ?? 'REF12365',
+      referralCodeUsed: json['referral_code_used'] ?? 'REF12345',
     );
   }
 

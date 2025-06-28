@@ -8,18 +8,36 @@ import 'package:tournament_app/screens/main_bottom_nav.dart';
 import 'package:tournament_app/widgets/show_snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? initialPhone;
+  final String? initialPassword;
+
+  const LoginScreen({super.key, this.initialPhone, this.initialPassword});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  late LoginController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(LoginController());
+
+    // Set initial values if provided
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.initialPhone != null) {
+        controller.loginController.text = widget.initialPhone!;
+      }
+      if (widget.initialPassword != null) {
+        controller.passwordController.text = widget.initialPassword!;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Initialize GetX controller
-    final LoginController controller = Get.put(LoginController());
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -125,86 +143,88 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(height: 20),
 
                       // Password field
-                      Obx(() => TextFormField(
-                        controller: controller.passwordController,
-                        validator: controller.validatePassword,
-                        obscureText: !controller.isPasswordVisible.value,
-                        decoration: InputDecoration(
-                          labelText: "Password",
-                          hintText: "Enter your password",
-                          labelStyle: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              controller.isPasswordVisible.value
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
+                      Obx(
+                        () => TextFormField(
+                          controller: controller.passwordController,
+                          validator: controller.validatePassword,
+                          obscureText: !controller.isPasswordVisible.value,
+                          decoration: InputDecoration(
+                            labelText: "Password",
+                            hintText: "Enter your password",
+                            labelStyle: TextStyle(
                               color: Colors.grey[600],
+                              fontSize: 14,
                             ),
-                            onPressed: controller.togglePasswordVisibility,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[400]!),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.red),
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.red),
-                          ),
-                        ),
-                      )),
-                    SizedBox(height: 16),
-
-                    // Forgot password and Create account in single row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            "Forgot password?",
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SignUpScreen(),
+                            hintStyle: TextStyle(color: Colors.grey[400]),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                controller.isPasswordVisible.value
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.grey[600],
                               ),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            "Create an account",
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
+                              onPressed: controller.togglePasswordVisibility,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey[400]!),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.red),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.red),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 16),
+
+                      // Forgot password and Create account in single row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () {},
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              "Forgot password?",
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SignUpScreen(),
+                                ),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              "Create an account",
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       SizedBox(height: 30),
 
                       // Sign in button
@@ -213,12 +233,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           return Align(
                             alignment: Alignment.center,
                             child: GestureDetector(
-                              onTap: authService.isLoading ? null : () => _handleLogin(context, controller, authService),
+                              onTap:
+                                  authService.isLoading
+                                      ? null
+                                      : () => _handleLogin(
+                                        context,
+                                        controller,
+                                        authService,
+                                      ),
                               child: Container(
                                 width: 180,
                                 height: 45,
                                 decoration: BoxDecoration(
-                                  color: authService.isLoading ? Colors.grey : Colors.black,
+                                  color:
+                                      authService.isLoading
+                                          ? Colors.grey
+                                          : Colors.black,
                                   borderRadius: BorderRadius.only(
                                     topLeft: Radius.circular(20),
                                     bottomLeft: Radius.circular(5),
@@ -232,23 +262,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ],
                                 ),
                                 child: Center(
-                                  child: authService.isLoading
-                                      ? SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
+                                  child:
+                                      authService.isLoading
+                                          ? SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                          : Text(
+                                            "Sign in",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        )
-                                      : Text(
-                                          "Sign in",
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
                                 ),
                               ),
                             ),
@@ -256,64 +287,69 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
 
-                    SizedBox(height: 20),
-                    Align(
-                      alignment: Alignment.center,
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      SignUpScreen(), // Navigate to LoginScreen
+                      SizedBox(height: 20),
+                      Align(
+                        alignment: Alignment.center,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        SignUpScreen(), // Navigate to LoginScreen
+                              ),
+                            );
+                          },
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: "Don't have an account? ",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: "Register",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: "Don't have an account? ",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              TextSpan(
-                                text: "Register",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-      )],
+        ],
       ),
     );
   }
 
   // Handle login process
-  Future<void> _handleLogin(BuildContext context, LoginController controller, AuthService authService) async {
+  Future<void> _handleLogin(
+    BuildContext context,
+    LoginController controller,
+    AuthService authService,
+  ) async {
     if (!controller.formKey.currentState!.validate()) {
-      if (context.mounted) {
-        showSnackBarMessage(context, 'Please fill all fields correctly', type: SnackBarType.error);
-      }
       return;
     }
 
     // Clear any previous errors
     authService.clearError();
+
+    // Clear registration data
+    authService.clearRegistrationData();
 
     final success = await authService.login(
       login: controller.loginController.text.trim(),
@@ -323,8 +359,11 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!context.mounted) return;
 
     if (success) {
-      showSnackBarMessage(context, 'Login successful!', type: SnackBarType.success);
-      controller.clearForm();
+      showSnackBarMessage(
+        context,
+        'Login successful!',
+        type: SnackBarType.success,
+      );
 
       // Navigate to main app
       Navigator.pushAndRemoveUntil(
@@ -336,7 +375,7 @@ class _LoginScreenState extends State<LoginScreen> {
       showSnackBarMessage(
         context,
         authService.errorMessage ?? 'Login failed',
-        type: SnackBarType.error
+        type: SnackBarType.error,
       );
     }
   }

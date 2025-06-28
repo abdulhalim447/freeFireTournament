@@ -28,6 +28,7 @@ class URLs {
 
   // deposit and withdraw related api
   static const String depositUrl = '$_baseUrl/account/recharge';
+  static const String manualDepositUrl = '$_baseUrl/account/manual-payment';
   static const String withdrawUrl = '$_baseUrl/account/withdraw-request';
 
   // mobile banking related api
@@ -35,11 +36,9 @@ class URLs {
 
   //result screen api
   static const String resultTopTitleUrl = '$_baseUrl/sub-category/finish/list';
-
-
-
-
-// old api
+  static const String gameResultUrl = '$_baseUrl/match-finish/list';
+  static const String prizingUrl = '$_baseUrl/match-prize/by-match-id/';
+  // old api
   static const String BRMatchUrl =
       '$_baseUrl/api/match/get_all_matches.php?categories=BR MATCH';
   static const String ClashSquadUrl =

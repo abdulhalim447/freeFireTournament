@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tournament_app/models/mathces.dart';
+import 'package:tournament_app/screens/home_page.dart';
 import 'package:tournament_app/screens/main_bottom_nav.dart';
+import 'package:tournament_app/screens/matches/match_related/tournament_details_screen.dart';
 import 'package:tournament_app/services/user_preference.dart';
 import 'package:tournament_app/widgets/show_snackbar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -397,7 +399,7 @@ class _ReservationScreenState extends State<ReservationScreen>
             onPressed:
                 () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => BottomNavScreen()),
+                  MaterialPageRoute(builder: (context) => const HomePage()),
                 ),
             icon: Icon(Icons.check_circle_outline),
             label: Text("Done"),

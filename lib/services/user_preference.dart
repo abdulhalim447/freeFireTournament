@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tournament_app/models/login_user_model.dart';
+import 'package:flutter/foundation.dart';
 
 class UserPreference {
   static const String _keyUser = 'user';
@@ -11,6 +12,9 @@ class UserPreference {
   // Save user data
   static Future<bool> saveUser(User user) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    debugPrint(
+      '=== Saving user to preferences: ${jsonEncode(user.toJson())} ===',
+    );
     return await prefs.setString(_keyUser, jsonEncode(user.toJson()));
   }
 
@@ -19,33 +23,41 @@ class UserPreference {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userStr = prefs.getString(_keyUser);
     if (userStr != null) {
+      debugPrint('=== Retrieved user from preferences ===');
       return User.fromJson(jsonDecode(userStr));
     }
+    debugPrint('=== No user found in preferences ===');
     return null;
   }
 
   // Save access token
   static Future<bool> saveAccessToken(String token) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    debugPrint('=== Saving access token to preferences: $token ===');
     return await prefs.setString(_keyAccessToken, token);
   }
 
   // Get access token
   static Future<String?> getAccessToken() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyAccessToken);
+    final token = prefs.getString(_keyAccessToken);
+    debugPrint('=== Retrieved access token from preferences: $token ===');
+    return token;
   }
 
   // Save token type
   static Future<bool> saveTokenType(String tokenType) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    debugPrint('=== Saving token type to preferences: $tokenType ===');
     return await prefs.setString(_keyTokenType, tokenType);
   }
 
   // Get token type
   static Future<String?> getTokenType() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyTokenType);
+    final tokenType = prefs.getString(_keyTokenType);
+    debugPrint('=== Retrieved token type from preferences: $tokenType ===');
+    return tokenType;
   }
 
   // Get authorization header
@@ -55,8 +67,13 @@ class UserPreference {
 
     // If token exists, use it
     if (tokenType != null && accessToken != null) {
-      return '$tokenType $accessToken';
+      final authHeader = '$tokenType $accessToken';
+      debugPrint('=== Created authorization header: $authHeader ===');
+      return authHeader;
     }
+    debugPrint(
+      '=== Could not create authorization header: missing token or type ===',
+    );
     return null;
   }
 
@@ -105,6 +122,7 @@ class UserPreference {
   // Set logged in status
   static Future<bool> setLoggedIn(bool value) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    debugPrint('=== Setting logged in status: $value ===');
     return await prefs.setBool(_keyIsLoggedIn, value);
   }
 
@@ -113,12 +131,17 @@ class UserPreference {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
     final token = await getAccessToken();
-    return isLoggedIn && token != null;
+    final isAuthenticated = isLoggedIn && token != null;
+    debugPrint(
+      '=== Is user logged in: $isAuthenticated (isLoggedIn: $isLoggedIn, token exists: ${token != null}) ===',
+    );
+    return isAuthenticated;
   }
 
   // Clear all user data
   static Future<void> clearUser() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    debugPrint('=== Clearing all user data from preferences ===');
     await prefs.remove(_keyUser);
     await prefs.remove(_keyAccessToken);
     await prefs.remove(_keyTokenType);
@@ -141,8 +164,10 @@ class UserPreference {
         referralCode: user.referralCode,
         referralCodeUsed: user.referralCodeUsed,
       );
+      debugPrint('=== Updating user balance to: $newBalance ===');
       return await saveUser(updatedUser);
     }
+    debugPrint('=== Failed to update balance: no user found ===');
     return false;
   }
 }

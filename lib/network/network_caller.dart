@@ -22,7 +22,9 @@ class NetworkCaller {
       final String? token = await UserPreference.getAccessToken();
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
-        debugPrint('=== Added Authorization header with token ===');
+        debugPrint('=== Added Authorization header with token: $token ===');
+      } else {
+        debugPrint('=== No token found for Authorization header ===');
       }
 
       debugPrint('=== Request headers: $headers ===');
@@ -56,6 +58,20 @@ class NetworkCaller {
             errorMessage: 'Failed to decode response: ${e.toString()}',
           );
         }
+      } else if (response.statusCode == 401) {
+        debugPrint('=== 401 Unauthorized Error ===');
+        debugPrint('=== Headers sent: $headers ===');
+        debugPrint('=== Response body: ${response.body} ===');
+
+        // Check if token exists in SharedPreferences
+        final storedToken = await UserPreference.getAccessToken();
+        debugPrint('=== Stored token in preferences: $storedToken ===');
+
+        return NetworkResponse(
+          statusCode: response.statusCode,
+          isSuccess: false,
+          errorMessage: 'Unauthorized: ${response.body}',
+        );
       } else {
         debugPrint(
           '=== Request failed with status: ${response.statusCode} ===',
@@ -104,8 +120,12 @@ class NetworkCaller {
       final String? token = await UserPreference.getAccessToken();
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
-        debugPrint('=== Added Authorization header with token ===');
+        debugPrint('=== Added Authorization header with token: $token ===');
+      } else {
+        debugPrint('=== No token found for Authorization header ===');
       }
+
+      debugPrint('=== Request headers: $headers ===');
 
       Response response = await post(
         Uri.parse(url),
@@ -117,11 +137,34 @@ class NetworkCaller {
       debugPrint('Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final decodedData = jsonDecode(response.body);
+        try {
+          final decodedData = jsonDecode(response.body);
+          return NetworkResponse(
+            statusCode: response.statusCode,
+            isSuccess: true,
+            responsData: decodedData,
+          );
+        } catch (e) {
+          debugPrint('JSON decode error: $e');
+          return NetworkResponse(
+            statusCode: response.statusCode,
+            isSuccess: false,
+            errorMessage: 'Failed to decode response: ${e.toString()}',
+          );
+        }
+      } else if (response.statusCode == 401) {
+        debugPrint('=== 401 Unauthorized Error ===');
+        debugPrint('=== Headers sent: $headers ===');
+        debugPrint('=== Response body: ${response.body} ===');
+
+        // Check if token exists in SharedPreferences
+        final storedToken = await UserPreference.getAccessToken();
+        debugPrint('=== Stored token in preferences: $storedToken ===');
+
         return NetworkResponse(
           statusCode: response.statusCode,
-          isSuccess: true,
-          responsData: decodedData,
+          isSuccess: false,
+          errorMessage: 'Unauthorized: ${response.body}',
         );
       } else {
         return NetworkResponse(

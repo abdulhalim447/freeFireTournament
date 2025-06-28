@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../models/result_match_model.dart';
 import '../providers/result_provider.dart';
 import '../providers/result_matches_provider.dart';
+import '../providers/balance_provider.dart';
+import '../screens/prizing_result_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   const ResultScreen({Key? key}) : super(key: key);
@@ -23,10 +25,18 @@ class _ResultScreenState extends State<ResultScreen>
     super.initState();
     // Don't create TabController here - we'll create it when we get data
 
-    // Fetch subcategories (tab titles) when screen initializes
+    // Fetch subcategories (tab titles) and balance when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ResultProvider>().getResultTopTitles();
+      context.read<BalanceProvider>().fetchBalance();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh balance when returning to this screen
+    context.read<BalanceProvider>().fetchBalance();
   }
 
   // Initialize tab controller once we have the data
@@ -65,30 +75,64 @@ class _ResultScreenState extends State<ResultScreen>
       appBar: AppBar(
         backgroundColor: Colors.grey[100],
         elevation: 0,
-        title: const Center(
-          child: Text(
-            'Result',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
-              fontSize: 30,
-              letterSpacing: 1.2,
-            ),
+        title: const Text(
+          'Result',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 30,
+            letterSpacing: 1.2,
           ),
         ),
+        centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Center(
-              child: Text(
-                'TK 0',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                  fontSize: 16,
+          Consumer<BalanceProvider>(
+            builder: (context, balanceProvider, _) {
+              return Container(
+                margin: const EdgeInsets.only(
+                  right: 16.0,
+                  top: 8.0,
+                  bottom: 8.0,
                 ),
-              ),
-            ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 4.0,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.amber.shade300, Colors.orange.shade400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.account_balance_wallet,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'TK ${balanceProvider.balance}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
         bottom: PreferredSize(
@@ -254,12 +298,36 @@ class _ResultScreenState extends State<ResultScreen>
                 padding: const EdgeInsets.all(16),
                 itemCount: subcategoryMatches.length,
                 itemBuilder: (context, matchIndex) {
-                  return _buildMatchCard(subcategoryMatches[matchIndex]);
+                  return _buildSimpleMatchCard(
+                    subcategoryMatches[matchIndex],
+                    onTap: () {
+                      // Handle match tap - will navigate to details screen later
+                      _onMatchTap(subcategoryMatches[matchIndex]);
+                    },
+                  );
                 },
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  void _onMatchTap(ResultMatch match) {
+    // Navigate to PrizingResultScreen with match details
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => PrizingResultScreen(
+              matchId: match.id,
+              matchTitle: match.matchTitle,
+              matchDate: _formatDateTime(match),
+              winPrize: match.totalPrize?.toString() ?? '0',
+              perKill: match.perKill?.toString() ?? '0',
+              entryFee: match.entryFee?.toString() ?? '0',
+            ),
       ),
     );
   }
@@ -289,6 +357,143 @@ class _ResultScreenState extends State<ResultScreen>
     );
   }
 
+  // Simplified match card showing only required fields
+  Widget _buildSimpleMatchCard(
+    ResultMatch match, {
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              offset: const Offset(0, 2),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Match Title
+                  Text(
+                    match.matchTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Match details in a row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Prize
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Prize',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                          Text(
+                            '${match.totalPrize} TK',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Entry Type
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Type',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                          Text(
+                            match.entryType.isNotEmpty
+                                ? match.entryType.first.toUpperCase()
+                                : 'N/A',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Version
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Version',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                          Text(
+                            match.version.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Match ID badge
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  '#${match.id}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Keep the original detailed match card for reference
   Widget _buildMatchCard(ResultMatch match) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -321,27 +526,12 @@ class _ResultScreenState extends State<ResultScreen>
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child:
-                          match.image != null
-                              ? Image.network(
-                                match.image!,
-                                width: 90,
-                                height: 65,
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) => Image.asset(
-                                      'assets/images/freefire.png',
-                                      width: 90,
-                                      height: 65,
-                                      fit: BoxFit.cover,
-                                    ),
-                              )
-                              : Image.asset(
-                                'assets/images/freefire.png',
-                                width: 90,
-                                height: 65,
-                                fit: BoxFit.cover,
-                              ),
+                      child: Image.asset(
+                        'assets/images/freefire.png',
+                        width: 90,
+                        height: 65,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -415,7 +605,9 @@ class _ResultScreenState extends State<ResultScreen>
                         Expanded(
                           child: _buildDetailItem(
                             'PER KILL',
-                            '${match.perKill} TK',
+                            match.perKill != null
+                                ? '${match.perKill} TK'
+                                : 'N/A',
                           ),
                         ),
                         Expanded(

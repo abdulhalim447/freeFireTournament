@@ -28,7 +28,7 @@ class _DepositScreenState extends State<DepositScreen>
   final Color primaryPurple = Color(0xFF5F31E2);
 
   // Controllers
-  final TextEditingController _transactionIdController =
+  final TextEditingController _accountNumberController =
       TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   bool isLoading = false;
@@ -47,8 +47,8 @@ class _DepositScreenState extends State<DepositScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _transactionIdController.dispose();
     _amountController.dispose();
+    _accountNumberController.dispose();
     super.dispose();
   }
 
@@ -122,11 +122,12 @@ class _DepositScreenState extends State<DepositScreen>
     );
   }
 
+  // auto payment  is coming soon
   Widget _buildAutoPaymentTab() {
     // Placeholder for auto payment tab
     return Center(
       child: Text(
-        'Auto Payment Coming Soon',
+        'Something went wrong. Please try again later.',
         style: TextStyle(
           fontSize: 18,
           color: Colors.white,
@@ -260,7 +261,7 @@ class _DepositScreenState extends State<DepositScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ট্রানজেকশন আইডি দিন',
+            'পেমেন্ট ইনফরমেশন',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -268,26 +269,9 @@ class _DepositScreenState extends State<DepositScreen>
             ),
           ),
           SizedBox(height: 16),
-          _buildAmountField(),
+          _buildAccountNumberField(),
           SizedBox(height: 16),
-          _buildTransactionIdField(),
-
-          // old code
-          // Container(
-          //   width: double.infinity,
-          //   padding: EdgeInsets.all(16),
-          //   decoration: BoxDecoration(
-          //     borderRadius: BorderRadius.circular(8),
-          //     border: Border.all(color: Colors.white.withOpacity(0.5)),
-          //   ),
-          //   child: Text(
-          //     'ট্রানজেকশন আইডি দিন',
-          //     style: TextStyle(
-          //       fontSize: 16,
-          //       color: Colors.white.withOpacity(0.9),
-          //     ),
-          //   ),
-          // ),
+          _buildAmountField(),
           SizedBox(height: 16),
           _buildInstructionStep(
             '• $dialCode ডায়াল করে আপনার $paymentMethod মোবাইল মেনুতে যান অথবা $paymentMethod অ্যাপে যান ।',
@@ -320,7 +304,6 @@ class _DepositScreenState extends State<DepositScreen>
                 );
               }
 
-              // Get bank name for current selected payment method
               String bankName =
                   _selectedPaymentMethod == 0
                       ? 'Bkash'
@@ -328,7 +311,6 @@ class _DepositScreenState extends State<DepositScreen>
                       ? 'Rocket'
                       : 'Nagad';
 
-              // Get account number from provider
               String accountNumber = bankInfoProvider.getAccountNumber(
                 bankName,
               );
@@ -385,7 +367,7 @@ class _DepositScreenState extends State<DepositScreen>
             Colors.white,
           ),
           _buildInstructionStep(
-            '• এখন উপরের বক্সে আপনার Transaction ID এবং Amount দিন আবার নিচের VERIFY বাটনে ক্লিক করুন।',
+            '• পেমেন্ট সম্পন্ন হলে উপরের বক্সে আপনার পেমেন্ট নাম্বার এবং এমাউন্ট দিয়ে VERIFY বাটনে ক্লিক করুন।',
             Colors.white,
           ),
         ],
@@ -414,6 +396,44 @@ class _DepositScreenState extends State<DepositScreen>
           Expanded(
             child: Text(text, style: TextStyle(fontSize: 14, color: color)),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountNumberField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextFormField(
+        controller: _accountNumberController,
+        keyboardType: TextInputType.phone,
+        style: TextStyle(fontSize: 16, color: Colors.black87),
+        decoration: InputDecoration(
+          hintText: 'আপনার পেমেন্ট নাম্বার',
+          hintStyle: TextStyle(fontSize: 16, color: Colors.grey.shade500),
+          filled: false,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          prefixIcon: Icon(Icons.phone_android, color: primaryPurple),
+        ),
+        cursorColor: primaryPurple,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(11),
         ],
       ),
     );
@@ -464,41 +484,6 @@ class _DepositScreenState extends State<DepositScreen>
     );
   }
 
-  Widget _buildTransactionIdField() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextFormField(
-        controller: _transactionIdController,
-        keyboardType: TextInputType.text,
-        textCapitalization: TextCapitalization.characters,
-        style: TextStyle(fontSize: 16, color: Colors.black87),
-        decoration: InputDecoration(
-          hintText: 'Transaction ID',
-          hintStyle: TextStyle(fontSize: 16, color: Colors.grey.shade500),
-          filled: false,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          prefixIcon: Icon(Icons.receipt_long, color: primaryPurple),
-        ),
-        cursorColor: primaryPurple,
-      ),
-    );
-  }
-
   Widget _buildVerifyButton() {
     return SizedBox(
       width: double.infinity,
@@ -545,15 +530,24 @@ class _DepositScreenState extends State<DepositScreen>
   }
 
   void _processDeposit() async {
-    final String transactionId = _transactionIdController.text.trim();
+    final String accountNumber = _accountNumberController.text.trim();
     final String amountText = _amountController.text.trim();
     final int amount = int.tryParse(amountText) ?? 0;
 
     // Validate inputs
-    if (transactionId.isEmpty) {
+    if (accountNumber.isEmpty) {
       showSnackBarMessage(
         context,
-        'Please enter a transaction ID',
+        'পেমেন্ট নাম্বার দিন',
+        type: SnackBarType.error,
+      );
+      return;
+    }
+
+    if (accountNumber.length != 11) {
+      showSnackBarMessage(
+        context,
+        'সঠিক পেমেন্ট নাম্বার দিন',
         type: SnackBarType.error,
       );
       return;
@@ -589,13 +583,13 @@ class _DepositScreenState extends State<DepositScreen>
             ? 'rocket'
             : 'nagad';
 
-    // Make the actual API call
+    // Make the actual API call with updated URL and body structure
     final response = await NetworkCaller.postRequest(
-      URLs.depositUrl,
+      URLs.manualDepositUrl,
       body: {
-        "amount": amount,
         "payment_method": paymentMethod,
-        "transaction_id": transactionId,
+        "account_number": accountNumber,
+        "amount": amount,
       },
     );
 
@@ -610,8 +604,8 @@ class _DepositScreenState extends State<DepositScreen>
         type: SnackBarType.success,
       );
 
-      _transactionIdController.clear();
       _amountController.clear();
+      _accountNumberController.clear();
 
       // Refresh balance
       Provider.of<BalanceProvider>(context, listen: false).fetchBalance();

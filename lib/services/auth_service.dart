@@ -10,10 +10,52 @@ class AuthService extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   User? _currentUser;
+  String? _lastRegisteredPhone;
+  String? _lastRegisteredPassword;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   User? get currentUser => _currentUser;
+  String? get lastRegisteredPhone => _lastRegisteredPhone;
+  String? get lastRegisteredPassword => _lastRegisteredPassword;
+
+  // Clear registration data after login
+  void clearRegistrationData() {
+    _lastRegisteredPhone = null;
+    _lastRegisteredPassword = null;
+  }
+
+  // Initialize auth state on app startup
+  Future<void> initAuthState() async {
+    debugPrint('=== Initializing Auth State ===');
+    final isLoggedIn = await UserPreference.isLoggedIn();
+    debugPrint('=== Is Logged In: $isLoggedIn ===');
+
+    if (isLoggedIn) {
+      final user = await UserPreference.getUser();
+      if (user != null) {
+        _currentUser = user;
+        debugPrint('=== Current User Set: ${user.name} ===');
+
+        // Verify token is valid by making a test API call
+        final token = await UserPreference.getAccessToken();
+        debugPrint('=== Stored Token: $token ===');
+
+        // Check if token is valid by making a simple API call
+        final response = await NetworkCaller.getRequest(URLs.profileUrl);
+        if (!response.isSuccess) {
+          debugPrint('=== Token validation failed, logging out ===');
+          await logout();
+        } else {
+          debugPrint('=== Token validated successfully ===');
+        }
+      } else {
+        debugPrint('=== No user found in preferences, logging out ===');
+        await logout();
+      }
+    }
+    notifyListeners();
+  }
 
   void _setLoading(bool loading) {
     _isLoading = loading;
@@ -50,10 +92,10 @@ class AuthService extends ChangeNotifier {
         'phone': phone,
         'password': password,
         'password_confirmation': password,
-        'referral_code_used': referralCode, // Can be null
+        'referral_code_used': referralCode,
       };
 
-      print('Signup data: $signupData');
+      debugPrint('Signup data: $signupData');
 
       final response = await NetworkCaller.postRequest(
         URLs.signUpUrl,
@@ -66,17 +108,10 @@ class AuthService extends ChangeNotifier {
         );
 
         if (signupResponse.isSuccess && signupResponse.user != null) {
-          _currentUser = signupResponse.user;
-
-          // Save user data and tokens
-          await UserPreference.saveUser(signupResponse.user!);
-          if (signupResponse.accessToken != null) {
-            await UserPreference.saveAccessToken(signupResponse.accessToken!);
-          }
-          if (signupResponse.tokenType != null) {
-            await UserPreference.saveTokenType(signupResponse.tokenType!);
-          }
-          await UserPreference.setLoggedIn(true);
+          // Don't save user data or tokens - just return success
+          // We'll store the phone number and password temporarily for login screen
+          _lastRegisteredPhone = phone;
+          _lastRegisteredPassword = password;
 
           _setLoading(false);
           return true;

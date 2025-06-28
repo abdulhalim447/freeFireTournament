@@ -358,7 +358,7 @@ class _SubcategoryMatchesScreenState extends State<SubcategoryMatchesScreen> {
                   children: [
                     _buildDetailBox(
                       'PER KILL',
-                      '10 TK',
+                      '0.00 TK',
                       flex: 1,
                     ), // Assuming 10 TK per kill
                     _buildDetailBox('MAP', match.matchMap, flex: 1),

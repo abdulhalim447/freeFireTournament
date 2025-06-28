@@ -1,18 +1,13 @@
 import 'dart:convert';
 
 class ResultMatchesModel {
-  final String message;
   final List<ResultMatch> data;
 
-  ResultMatchesModel({required this.message, required this.data});
+  ResultMatchesModel({required this.data});
 
-  factory ResultMatchesModel.fromJson(Map<String, dynamic> json) {
+  factory ResultMatchesModel.fromJson(List<dynamic> json) {
     return ResultMatchesModel(
-      message: json['message'] ?? 'Results retrieved',
-      data:
-          (json['data'] as List)
-              .map((match) => ResultMatch.fromJson(match))
-              .toList(),
+      data: json.map((match) => ResultMatch.fromJson(match)).toList(),
     );
   }
 }
@@ -27,9 +22,15 @@ class ResultMatch {
   final List<String> entryType;
   final String version;
   final String matchMap;
-  final int perKill;
-  final String? image;
+  final int? perKill;
+  final String? details;
+  final String? roomDetails;
+  final int status;
   final int subCategoryId;
+  final dynamic matchRules;
+  final List<MatchPoint> matchPoints;
+  final List<PrizeSet> prizeSets;
+  final int isJoined;
 
   ResultMatch({
     required this.id,
@@ -41,9 +42,15 @@ class ResultMatch {
     required this.entryType,
     required this.version,
     required this.matchMap,
-    required this.perKill,
-    this.image,
+    this.perKill,
+    this.details,
+    this.roomDetails,
+    required this.status,
     required this.subCategoryId,
+    this.matchRules,
+    required this.matchPoints,
+    required this.prizeSets,
+    required this.isJoined,
   });
 
   factory ResultMatch.fromJson(Map<String, dynamic> json) {
@@ -57,6 +64,33 @@ class ResultMatch {
       return [];
     }
 
+    // Parse match points
+    List<MatchPoint> parseMatchPoints(dynamic matchPointsData) {
+      if (matchPointsData == null || !(matchPointsData is List)) return [];
+      return (matchPointsData as List)
+          .map((point) => MatchPoint.fromJson(point))
+          .toList();
+    }
+
+    // Parse prize sets
+    List<PrizeSet> parsePrizeSets(dynamic prizeSetsData) {
+      if (prizeSetsData == null || !(prizeSetsData is List)) return [];
+      return (prizeSetsData as List)
+          .map((prize) => PrizeSet.fromJson(prize))
+          .toList();
+    }
+
+    // Calculate per kill from match points if available
+    int? calculatePerKill(List<MatchPoint> matchPoints) {
+      final perKillPoint = matchPoints.firstWhere(
+        (point) => point.title.toLowerCase().contains('kill'),
+        orElse: () => MatchPoint(id: 0, point: 0, title: ''),
+      );
+      return perKillPoint.id != 0 ? perKillPoint.point : null;
+    }
+
+    final matchPointsList = parseMatchPoints(json['matchPoints']);
+
     return ResultMatch(
       id: json['id'] ?? 0,
       matchTitle: json['match_title'] ?? '',
@@ -67,9 +101,15 @@ class ResultMatch {
       entryType: parseEntryType(json['entry_type']),
       version: json['version'] ?? '',
       matchMap: json['match_map'] ?? '',
-      perKill: json['per_kill'] ?? 0,
-      image: json['image'],
+      perKill: calculatePerKill(matchPointsList),
+      details: json['detailes'],
+      roomDetails: json['room_details'],
+      status: json['status'] ?? 0,
       subCategoryId: json['sub_category_id'] ?? 0,
+      matchRules: json['matchRules'],
+      matchPoints: matchPointsList,
+      prizeSets: parsePrizeSets(json['prizeSets']),
+      isJoined: json['is_joined'] ?? 0,
     );
   }
 
@@ -95,5 +135,37 @@ class ResultMatch {
 
     // Return current date as fallback
     return DateTime.now();
+  }
+}
+
+class MatchPoint {
+  final int id;
+  final int point;
+  final String title;
+
+  MatchPoint({required this.id, required this.point, required this.title});
+
+  factory MatchPoint.fromJson(Map<String, dynamic> json) {
+    return MatchPoint(
+      id: json['id'] ?? 0,
+      point: json['point'] ?? 0,
+      title: json['title'] ?? '',
+    );
+  }
+}
+
+class PrizeSet {
+  final int id;
+  final String title;
+  final int amount;
+
+  PrizeSet({required this.id, required this.title, required this.amount});
+
+  factory PrizeSet.fromJson(Map<String, dynamic> json) {
+    return PrizeSet(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      amount: json['amount'] ?? 0,
+    );
   }
 }

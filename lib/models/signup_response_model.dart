@@ -1,14 +1,14 @@
 import 'package:tournament_app/models/login_user_model.dart';
 
 class SignUpResponseModel {
-  bool? success;
+  String? status;
   String? message;
   User? user;
   String? accessToken;
   String? tokenType;
 
   SignUpResponseModel({
-    this.success,
+    this.status,
     this.message,
     this.user,
     this.accessToken,
@@ -16,7 +16,7 @@ class SignUpResponseModel {
   });
 
   SignUpResponseModel.fromJson(Map<String, dynamic> json) {
-    success = json['success'];
+    status = json['status'];
     message = json['message'];
     user = json['user'] != null ? User.fromJson(json['user']) : null;
     accessToken = json['access_token'];
@@ -25,7 +25,7 @@ class SignUpResponseModel {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = Map<String, dynamic>();
-    data['success'] = success;
+    data['status'] = status;
     data['message'] = message;
     if (user != null) {
       data['user'] = user!.toJson();
@@ -36,5 +36,5 @@ class SignUpResponseModel {
   }
 
   // Helper getter to check if signup was successful
-  bool get isSuccess => success == true;
+  bool get isSuccess => status == 'success';
 }

@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tournament_app/auth/login_screen.dart';
 import 'package:tournament_app/screens/main_bottom_nav.dart';
+import 'package:tournament_app/services/auth_service.dart';
 import 'package:tournament_app/services/user_preference.dart';
-
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -50,7 +51,16 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkUserAndNavigate() async {
     // Wait for minimum splash duration
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    // Initialize auth state using AuthService
+    final authService = Provider.of<AuthService>(context, listen: false);
+    await authService.initAuthState();
+
+    // Wait a bit more to ensure animations complete
+    await Future.delayed(const Duration(seconds: 1));
 
     if (!mounted) return;
 

@@ -344,16 +344,23 @@ class SignUpScreen extends StatelessWidget {
     if (success) {
       showSnackBarMessage(
         context,
-        'Account created successfully!',
+        'Account created successfully! Please login with your credentials.',
         type: SnackBarType.success,
       );
       controller.clearForm();
 
-      // Navigate to main app
-      Navigator.pushAndRemoveUntil(
+      // Get the registered phone and password
+      final phone = authService.lastRegisteredPhone;
+      final password = authService.lastRegisteredPassword;
+
+      // Navigate to login screen with credentials
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => BottomNavScreen()),
-        (route) => false,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  LoginScreen(initialPhone: phone, initialPassword: password),
+        ),
       );
     } else {
       showSnackBarMessage(
